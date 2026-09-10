@@ -139,7 +139,10 @@ async function sendCommands(commands) {
 // Checked once per page load and shared by every dome control.
 let availability;
 export function isDomeAvailable() {
-    availability ??= fetchWithTimeout(PROBE_PATH)
+    // Plain "if" rather than ??= : Digistar 7's embedded browser is Chromium 84
+    // in some releases, and ??= only arrived in Chrome 85.
+    if (availability) return availability;
+    availability = fetchWithTimeout(PROBE_PATH)
         .then(async (response) => {
             if (!response.ok) return false;
             // Make sure this is really Digistar answering, not some other server.
