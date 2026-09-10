@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sky Tonight — Observation Planner</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Sky Tonight</h1>
+        <form id="search-form" class="search-form" role="search">
+            <input id="search-input" type="text" placeholder="Search by catalog ID or name (e.g. M31, Andromeda Galaxy)" aria-label="Search objects">
+            <button type="submit">Search</button>
+        </form>
+        <div class="planner-controls">
+            <label for="date-input">Date
+                <input id="date-input" type="date">
+            </label>
+            <label for="location-input">Location
+                <input id="location-input" type="text" placeholder="City or lat,lon">
+            </label>
+            <span id="location-status" class="location-status" aria-live="polite"></span>
+        </div>
+    </header>
+
+    <div class="app-body">
+        <nav class="tabs" aria-label="View selector">
+            <button class="tab is-active" data-tab="results">Results</button>
+            <button class="tab" data-tab="saved">Saved Objects</button>
+        </nav>
+
+        <div id="filters-bar" class="filters" aria-label="Filter results">
+            <label class="filters__checkbox">
+                <input id="all-catalogs-filter" type="checkbox">
+                All catalogs (not just Messier)
+            </label>
+            <label for="type-filter">Type
+                <select id="type-filter">
+                    <option value="">All types</option>
+                    <!-- populated by js/app.js from js/typeLabels.js -->
+                </select>
+            </label>
+            <label for="magnitude-filter">Brighter than
+                <input id="magnitude-filter" type="number" step="0.1" placeholder="mag">
+            </label>
+            <label class="filters__checkbox">
+                <input id="visible-filter" type="checkbox">
+                Visible now
+            </label>
+            <label for="altitude-filter">Peaks above
+                <input id="altitude-filter" type="number" step="1" min="0" max="90" placeholder="°">
+            </label>
+            <label for="apex-start-filter">Apex between
+                <input id="apex-start-filter" type="time">
+            </label>
+            <label for="apex-end-filter">and
+                <input id="apex-end-filter" type="time">
+            </label>
+            <button id="clear-filters" type="button">Clear filters</button>
+        </div>
+
+        <div class="results-column">
+            <main id="results" class="object-grid" aria-live="polite">
+                <!-- object cards rendered here by js/render.js -->
+            </main>
+
+            <section id="saved-list" class="saved-list" hidden aria-label="Saved objects">
+                <!-- favorited objects rendered here by js/render.js -->
+            </section>
+
+            <nav id="pagination" class="pagination" aria-label="Result pages" hidden>
+                <button id="prev-page" type="button">← Prev</button>
+                <span id="page-info"></span>
+                <button id="next-page" type="button">Next →</button>
+            </nav>
+        </div>
+
+        <aside id="detail-panel" class="detail-panel" aria-live="polite">
+            <!-- selected object detail rendered here by js/render.js -->
+        </aside>
+    </div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
