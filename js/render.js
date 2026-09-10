@@ -1,5 +1,6 @@
 import { isFavorite } from './storage.js';
 import { buildDetailUrl } from './objectLink.js';
+import { createDomeControl } from './digistar.js';
 import {
     formatDuration,
     formatTime,
@@ -58,6 +59,34 @@ export function renderObjectList(container, objects, handlers, emptyMessage = 'N
     container.appendChild(fragment);
 }
 
+// Builds the "Show on dome" control for an object, or returns null when the dome
+// can't usefully show it: missing coordinates, or the object never gets above the
+// horizon from this location (Digistar warns that zooming to a position below the
+// horizon produces a "black hole" effect on the opposite side of the dome).
+//
+// The dome is sent the object's next transit time, so it appears at its highest
+// point on the night the user picked. getNextTransitTime/getMaxAltitude are used
+// directly rather than the visibility window, because that window is empty for
+// circumpolar objects that never set (and so never "rise").
+function buildDomeControl(object, location, date) {
+    if (object.raDeg == null || object.decDeg == null || !location) return null;
+
+    const from = date ?? new Date();
+    const peakAltitude = object.getMaxAltitude(location, from);
+    if (peakAltitude == null || peakAltitude <= 0) return null;
+
+    const catalogLabel = `${object.catalog ?? ''}${object.catalogId ?? ''}`;
+    return createDomeControl({
+        name: object.properName ? `${object.properName} (${catalogLabel})` : catalogLabel,
+        ra: object.raDeg,
+        dec: object.decDeg,
+        size: object.angularSize ?? undefined,
+        date: object.getNextTransitTime(location, from),
+        lat: location.latitude,
+        lon: location.longitude,
+    });
+}
+
 export function renderDetailPanel(panel, object, { visibility, location, date, onClose } = {}) {
     const { riseTime, transitTime, setTime, durationMs, maxAltitudeDeg } = visibility ?? {};
 
@@ -87,6 +116,10 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
         </dl>
         <a class="detail-panel__more" href="${buildDetailUrl(object, location, date)}">More details →</a>
     `;
+
+    const domeControl = buildDomeControl(object, location, date);
+    if (domeControl) panel.append(domeControl);
+
     panel.classList.add('is-open');
     panel.querySelector('.detail-panel__close')?.addEventListener('click', () => {
         panel.classList.remove('is-open');

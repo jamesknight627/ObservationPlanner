@@ -414,3 +414,40 @@ button:focus-visible {
         grid-template-columns: 1fr;
     }
 }
+
+/* Dome control (js/digistar.js) — only visible when served by relay/server.mjs */
+.dome-control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.dome-control[hidden] {
+    display: none;
+}
+
+.dome-button {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dome-button--secondary {
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+
+.dome-button:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.dome-control__status {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.dome-control__status.is-error {
+    color: #ff8080;
+}
