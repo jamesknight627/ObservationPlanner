@@ -5,8 +5,6 @@ A single-page app that lets amateur astronomers, students, and hobbyists answer
 date and location, browse or search deep-sky objects, see when they rise, peak,
 and set from your sky, and save favorites for next time.
 
-Built for WEB1430's final project. See [proposal/proposal.txt](proposal/proposal.txt)
-for the original project proposal.
 
 ## Features
 
