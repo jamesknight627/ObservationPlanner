@@ -11,14 +11,16 @@ point the dome at any object in the planner with one click.
 
 ## Features
 
-- **Observation planner** — browse the Messier catalog (or the full ~227k-object
-  database) filtered by date/location, type, magnitude, "visible now," peak
+- **Observation planner** — browse the Messier catalog, the full ~227k-object
+  deep-sky database, or the Solar System (the Sun, planets, and Pluto), filtered by date/location, type, magnitude, "visible now," peak
   altitude, and time-at-apex window, paginated 20 at a time.
 - **Object search** — search by catalog ID (`M31`, `NGC224`) or common name
-  (`Andromeda`, `Orion Nebula`).
+  (`Andromeda`, `Orion Nebula`). With the Solar System catalog selected,
+  search by planet name (`Jupiter`).
 - **Object details** — magnitude, angular size, RA/Dec, and computed rise time,
   transit ("time at apex"), max altitude, set time, and time above the horizon,
-  for the currently selected date and location.
+  for the currently selected date and location. Solar-system bodies also show
+  their distance from Earth, diameter, gravity, orbital period, and moon count.
 - **Observing guide** — on the full object page (`object.html`), a second panel
   estimates the home constellation, minimum recommended magnification, minimum
   equipment, and darkest-sky (Bortle scale) tolerance for that object, plus a
@@ -144,6 +146,9 @@ style.css                All styling
 js/
   api.js                 fetch() wrapper around the datastro.eu Explore API
   CelestialObject.js      Core model: coordinate math, visibility, observing guide
+  SolarSystemBody.js      CelestialObject subclass for the Sun/planets (moving positions)
+  ephemeris.js            Computes Sun/planet RA/Dec, distance, and magnitude for a date
+  objectFactory.js        Picks the right class per dataset (lookups, saved favorites)
   app.js                  Planner page controller: state, event wiring, pagination
   object.js               Object detail page controller
   render.js               DOM rendering for cards, lists, and the detail panel
@@ -163,13 +168,18 @@ js/
 
 - **[datastro.eu Explore API](https://www.datastro.eu/api/explore/v2.1/catalog/datasets/deep-sky-objects)**
   — the deep-sky object catalog (position, magnitude, size, type, constellation).
+- **[datastro.eu Solar System data](https://www.datastro.eu/explore/dataset/donnees-systeme-solaire-solar-system-data/)**
+  — physical facts for the Sun and planets (from NASA's Planetary Fact Sheets).
+  The field names used are listed in `SOLAR_FIELDS` in `SolarSystemBody.js`.
+- **[JPL approximate planetary positions](https://ssd.jpl.nasa.gov/planets/approx_pos.html)**
+  — the orbital elements built into `ephemeris.js` (no network request).
 - **[OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/)** — geocodes
   a typed place name into coordinates. Its usage policy allows light use (about
   one request per second); Sky Tonight only geocodes when a location is typed.
 - **[Wikipedia REST API](https://en.wikipedia.org/api/rest_v1/)** — photo and
   summary text on the object detail page.
 
-All three are called directly from the browser; no server or API key required.
+All are called directly from the browser; no server or API key required.
 On a planetarium, dome commands go to Digistar's own web interface on the Host.
 
 ## How the astronomy works
@@ -186,6 +196,16 @@ given location and time (standard spherical trig), then derives:
   around the meridian (time from rise to transit equals time from transit to
   set).
 - **Max altitude** — the altitude at the transit moment.
+
+Planets are different: they move against the stars, so the solar-system
+dataset has no RA/Dec at all. `ephemeris.js` computes their positions from
+JPL's Keplerian orbital elements (valid 1800–2050, accurate to a few
+arcminutes): it places each planet and Earth on their orbits, subtracts to get
+the view from Earth, and converts to RA/Dec. It also estimates apparent
+magnitude (from distances and phase angle) and apparent size.
+`SolarSystemBody` overrides a single method, `getEquatorialCoords(time)`, so
+the rise/transit/set code above works on planets unchanged; the transit
+search simply refines its estimate once to account for the planet's drift.
 
 The **observing guide** (constellation aside) is different: magnification,
 equipment, and Bortle tolerance aren't in the dataset at all, so they're
@@ -259,6 +279,13 @@ sent to Digistar.
   Messier catalog this covers everything; on "all catalogs" with a broad
   filter, a small number of qualifying objects outside that batch could be
   missed.
+- Planet positions ignore precession, nutation, and light-time (like the
+  deep-sky coordinates, they're J2000), and Saturn's magnitude ignores its
+  rings, so it can read up to ~1 mag dimmer than reality. The Moon isn't
+  included: it isn't in the solar-system dataset, and it moves too fast for
+  this simple orbital model.
+- "Visible now" means above the horizon, not "the sky is dark," so a planet
+  can count as visible during daytime.
 - The Messier common-name table and Wikipedia lookups only reliably cover
   well-known objects; obscure NGC/IC/PGC entries usually won't have a photo or
   common name available.
