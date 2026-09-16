@@ -13,19 +13,10 @@ async function fetchSummary(title) {
     };
 }
 
-// Tries the object's proper name, then catalog-specific article naming conventions
-// ("Messier 31", "NGC 224"), and returns the first Wikipedia summary found.
+// Tries each of the object's candidate article titles (see getWikipediaCandidates on
+// CelestialObject / SolarSystemBody) and returns the first Wikipedia summary found.
 export async function findWikipediaSummary(object) {
-    const candidates = [];
-    if (object.properName) candidates.push(object.properName);
-    if (object.catalog === 'M' && object.catalogId != null) {
-        candidates.push(`Messier ${object.catalogId}`);
-    }
-    if (object.catalog && object.catalogId != null) {
-        candidates.push(`${object.catalog} ${object.catalogId}`);
-    }
-
-    for (const title of candidates) {
+    for (const title of object.getWikipediaCandidates()) {
         const summary = await fetchSummary(title);
         if (summary) return summary;
     }

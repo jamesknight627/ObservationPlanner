@@ -33,10 +33,19 @@ export function formatMagnitude(mag) {
     return `${mag} mag`;
 }
 
-// The dataset's angular-size field (r1) is in arcminutes.
+// Angular size is stored in arcminutes (the deep-sky dataset's r1 field is too). Planets
+// are much smaller than 1′, so those are shown in arcseconds instead.
 export function formatAngularSize(arcmin) {
     if (arcmin == null) return '—';
-    return `${arcmin}′`;
+    if (arcmin < 1) return `${(arcmin * 60).toFixed(1)}″`;
+    return `${Number(arcmin.toFixed(2))}′`;
+}
+
+// A dataset value with its unit, e.g. "142,984 km" or "24.79 m/s²".
+export function formatQuantity(value, unit) {
+    if (value == null) return '—';
+    const number = value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    return unit ? `${number} ${unit}` : number;
 }
 
 export function formatAltitude(altDeg) {

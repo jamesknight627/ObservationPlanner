@@ -1,6 +1,5 @@
 import { isFavorite } from './storage.js';
 import { buildDetailUrl } from './objectLink.js';
-import { createDomeControl } from './digistar.js';
 import {
     formatDuration,
     formatTime,
@@ -10,6 +9,7 @@ import {
     formatAngularSize,
     formatAltitude,
     formatCoords,
+    formatQuantity,
 } from './format.js';
 import { getTypeLabel } from './typeLabels.js';
 
@@ -23,13 +23,11 @@ export function renderObjectCard(object, { onSelect, onToggleFavorite } = {}) {
     const favorited = isFavorite(object.catalog, object.catalogId);
     if (favorited) card.classList.add('is-favorite');
 
-    const catalogLabel = `${object.catalog ?? ''}${object.catalogId ?? ''}`;
-    const title = object.properName ? `${object.properName} (${catalogLabel})` : catalogLabel;
     const { equipment } = object.getObservingGuide();
 
     card.innerHTML = `
         <button class="favorite-toggle" aria-label="Toggle favorite" aria-pressed="${favorited}">★</button>
-        <h3 class="object-card__name">${title}</h3>
+        <h3 class="object-card__name">${object.cardTitle}</h3>
         <p class="object-card__type">${getTypeLabel(object.type)}</p>
         <p class="object-card__mag">${formatMagnitude(object.magnitude)}</p>
         <p class="object-card__equipment">${equipment ?? '—'}</p>
@@ -59,32 +57,12 @@ export function renderObjectList(container, objects, handlers, emptyMessage = 'N
     container.appendChild(fragment);
 }
 
-// Builds the "Show on dome" control for an object, or returns null when the dome
-// can't usefully show it: missing coordinates, or the object never gets above the
-// horizon from this location (Digistar warns that zooming to a position below the
-// horizon produces a "black hole" effect on the opposite side of the dome).
-//
-// The dome is sent the object's next transit time, so it appears at its highest
-// point on the night the user picked. getNextTransitTime/getMaxAltitude are used
-// directly rather than the visibility window, because that window is empty for
-// circumpolar objects that never set (and so never "rise").
-function buildDomeControl(object, location, date) {
-    if (object.raDeg == null || object.decDeg == null || !location) return null;
-
-    const from = date ?? new Date();
-    const peakAltitude = object.getMaxAltitude(location, from);
-    if (peakAltitude == null || peakAltitude <= 0) return null;
-
-    const catalogLabel = `${object.catalog ?? ''}${object.catalogId ?? ''}`;
-    return createDomeControl({
-        name: object.properName ? `${object.properName} (${catalogLabel})` : catalogLabel,
-        ra: object.raDeg,
-        dec: object.decDeg,
-        size: object.angularSize ?? undefined,
-        date: object.getNextTransitTime(location, from),
-        lat: location.latitude,
-        lon: location.longitude,
-    });
+// <dt>/<dd> rows for any extra dataset facts the object provides (solar-system bodies
+// have diameter, gravity, etc.; deep-sky objects have none).
+export function renderPhysicalFactRows(object) {
+    return object.getPhysicalFacts()
+        .map(({ label, value, unit }) => `<dt>${label}</dt><dd>${formatQuantity(value, unit)}</dd>`)
+        .join('');
 }
 
 export function renderDetailPanel(panel, object, { visibility, location, date, onClose } = {}) {
@@ -100,7 +78,7 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
 
     panel.innerHTML = `
         <button class="detail-panel__close" aria-label="Close detail panel">×</button>
-        <h2>${object.catalog ?? ''} ${object.catalogId ?? ''}</h2>
+        <h2>${object.heading}</h2>
         <dl class="detail-panel__attrs">
             ${nameRow}
             <dt>Type</dt><dd>${getTypeLabel(object.type)}</dd>
@@ -113,13 +91,10 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
             <dt>Max altitude</dt><dd>${formatAltitude(maxAltitudeDeg)}</dd>
             <dt>Sets at</dt><dd>${formatTime(setTime)}</dd>
             <dt>Transit duration</dt><dd>${formatDuration(durationMs)}</dd>
+            ${renderPhysicalFactRows(object)}
         </dl>
         <a class="detail-panel__more" href="${buildDetailUrl(object, location, date)}">More details →</a>
     `;
-
-    const domeControl = buildDomeControl(object, location, date);
-    if (domeControl) panel.append(domeControl);
-
     panel.classList.add('is-open');
     panel.querySelector('.detail-panel__close')?.addEventListener('click', () => {
         panel.classList.remove('is-open');

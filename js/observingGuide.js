@@ -46,3 +46,13 @@ export function estimateMinMagnification(angularSizeArcmin) {
     const clamped = Math.min(MAX_MAGNIFICATION, Math.max(MIN_MAGNIFICATION, raw));
     return Math.round(clamped / 5) * 5;
 }
+
+// Planets are tiny (arcseconds), so the deep-sky formula above would always clamp to the
+// maximum. Instead, estimate the power that makes the disk look about as big as the full
+// Moon does to the naked eye (~30′ = 1800″) - enough to see it as a disk with some detail.
+export function estimatePlanetMagnification(angularSizeArcmin) {
+    if (angularSizeArcmin == null || angularSizeArcmin <= 0) return null;
+    const raw = 1800 / (angularSizeArcmin * 60);
+    const clamped = Math.min(MAX_MAGNIFICATION, Math.max(MIN_MAGNIFICATION, raw));
+    return Math.round(clamped / 5) * 5;
+}

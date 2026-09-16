@@ -23,6 +23,15 @@ export const TYPE_LABELS = {
     PD: 'Photographic Plate Defect',
 };
 
+// Type codes for solar-system bodies. These aren't in the deep-sky dataset (the
+// solar-system dataset has no type field), so they're kept separate and only offered in
+// the type filter when the Solar System dataset is selected.
+export const SOLAR_SYSTEM_TYPE_LABELS = {
+    Sun: 'The Sun',
+    Planet: 'Planet',
+    DwPl: 'Dwarf Planet',
+};
+
 export function getTypeLabel(type) {
-    return TYPE_LABELS[type] ?? type;
+    return TYPE_LABELS[type] ?? SOLAR_SYSTEM_TYPE_LABELS[type] ?? type;
 }
