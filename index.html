@@ -31,14 +31,16 @@
         </nav>
 
         <div id="filters-bar" class="filters" aria-label="Filter results">
-            <label class="filters__checkbox">
-                <input id="all-catalogs-filter" type="checkbox">
-                All catalogs (not just Messier)
+            <label for="dataset-filter">Catalog
+                <select id="dataset-filter">
+                    <option value="messier">Messier objects</option>
+                    <option value="deepSky">All deep-sky objects</option>
+                    <option value="solarSystem">Solar System</option>
+                </select>
             </label>
             <label for="type-filter">Type
                 <select id="type-filter">
-                    <option value="">All types</option>
-                    <!-- populated by js/app.js from js/typeLabels.js -->
+                    <!-- populated by js/app.js from js/typeLabels.js, per selected catalog -->
                 </select>
             </label>
             <label for="magnitude-filter">Brighter than
