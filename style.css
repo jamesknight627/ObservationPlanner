@@ -376,6 +376,14 @@ button:focus-visible {
     font-size: 1.1rem;
 }
 
+.observing-guide__warning {
+    color: #ff8080;
+    border-left: 3px solid #ff8080;
+    padding-left: 0.6rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
 .observing-guide__disclaimer {
     color: var(--text-muted);
     font-size: 0.8rem;
