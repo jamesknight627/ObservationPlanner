@@ -18,6 +18,8 @@ import { TYPE_LABELS, SOLAR_SYSTEM_TYPE_LABELS } from './typeLabels.js';
 const resultsEl = document.querySelector('#results');
 const detailPanelEl = document.querySelector('#detail-panel');
 const savedListEl = document.querySelector('#saved-list');
+const savedListToolbarEl = document.querySelector('#saved-list-toolbar');
+const favoritesSortEl = document.querySelector('#favorites-sort');
 const searchFormEl = document.querySelector('#search-form');
 const searchInputEl = document.querySelector('#search-input');
 const dateInputEl = document.querySelector('#date-input');
@@ -85,6 +87,7 @@ const state = {
     // Cached full match set when client-side filters are active, so Prev/Next paginate
     // in memory instead of re-fetching and re-filtering on every click.
     filteredResults: null,
+    favoritesSortBy: 'rise',
 };
 
 if (locationInputEl) locationInputEl.value = state.location.label ?? '';
@@ -270,13 +273,39 @@ function handleToggleFavorite(object, cardEl) {
     renderFavorites();
 }
 
+// Maps the sort-by <select> value to the matching getVisibilityWindow() field.
+const FAVORITES_SORT_FIELDS = {
+    rise: 'riseTime',
+    transit: 'transitTime',
+    set: 'setTime',
+    duration: 'durationMs',
+};
+
 function renderFavorites() {
     const favorites = getFavorites()
         .map(f => objectFromFavorite(f, state.date))
         .filter(Boolean);
+
+    const field = FAVORITES_SORT_FIELDS[state.favoritesSortBy] ?? 'riseTime';
+    const sorted = favorites
+        .map((object) => {
+            const value = object.getVisibilityWindow(state.location, state.date)[field];
+            const sortKey = value instanceof Date ? value.getTime() : value;
+            return { object, sortKey };
+        })
+        // Objects with no sort key (e.g. never rises/sets that day) sort to the end
+        // rather than before everything, so they don't push valid results down.
+        .sort((a, b) => {
+            if (a.sortKey == null && b.sortKey == null) return 0;
+            if (a.sortKey == null) return 1;
+            if (b.sortKey == null) return -1;
+            return a.sortKey - b.sortKey;
+        })
+        .map((entry) => entry.object);
+
     renderObjectList(
         savedListEl,
-        favorites,
+        sorted,
         { onSelect: handleSelectObject, onToggleFavorite: handleToggleFavorite },
         'No saved objects yet. Click the star on any object to save it.'
     );
@@ -289,6 +318,7 @@ tabButtons.forEach((btn) => {
         resultsEl.hidden = isSaved;
         savedListEl.hidden = !isSaved;
         if (filtersBarEl) filtersBarEl.hidden = isSaved;
+        if (savedListToolbarEl) savedListToolbarEl.hidden = !isSaved;
         if (isSaved) {
             renderFavorites();
             if (paginationEl) paginationEl.hidden = true;
@@ -344,6 +374,11 @@ apexStartFilterEl?.addEventListener('change', () => {
 apexEndFilterEl?.addEventListener('change', () => {
     state.filters.apexEnd = apexEndFilterEl.value;
     refreshResults();
+});
+
+favoritesSortEl?.addEventListener('change', () => {
+    state.favoritesSortBy = favoritesSortEl.value;
+    renderFavorites();
 });
 
 clearFiltersBtn?.addEventListener('click', () => {

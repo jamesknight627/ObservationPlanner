@@ -67,6 +67,17 @@
                 <!-- object cards rendered here by js/render.js -->
             </main>
 
+            <div id="saved-list-toolbar" class="saved-list-toolbar" hidden>
+                <label for="favorites-sort">Sort by
+                    <select id="favorites-sort">
+                        <option value="rise">Rise time</option>
+                        <option value="transit">Apex time</option>
+                        <option value="set">Set time</option>
+                        <option value="duration">Transit duration</option>
+                    </select>
+                </label>
+            </div>
+
             <section id="saved-list" class="saved-list" hidden aria-label="Saved objects">
                 <!-- favorited objects rendered here by js/render.js -->
             </section>

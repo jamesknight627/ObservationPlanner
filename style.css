@@ -140,6 +140,30 @@ button:focus-visible {
     display: none;
 }
 
+.saved-list-toolbar {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.saved-list-toolbar label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.saved-list-toolbar[hidden] {
+    display: none;
+}
+
 .results-column {
     display: flex;
     flex-direction: column;
