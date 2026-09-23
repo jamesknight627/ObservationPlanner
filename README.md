@@ -230,7 +230,7 @@ from New York (the planner's default location), sends:
 
 ```
 navigation location 40.7128 -74.006 ground 20 180 duration 0
-scene date 2026-09-10 06:21:32 ut
+scene date 2026-09-10 06:21:32
 sky on
 telescope zoom position celestial 0.71231 41.26900 1000 ly duration 5
 zoomTarget on
@@ -246,6 +246,10 @@ scene zoomFOV 12.67 duration 10 1 8
 - Digistar takes right ascension in **hours**, so the planner's degrees are
   divided by 15. Digistar also requires a distance; the catalog has none, and
   from Earth only direction matters, so a nominal 1000 ly is used.
+- `scene date` is sent without a trailing time-scale keyword. The User's Guide
+  documents one (e.g. `ut`), but some Digistar 7 installs reject it as an
+  unexpected token; UT is the default time scale either way, so the date/time
+  sent is unaffected.
 
 **Reset dome view** sends `telescope zoom stop`, `zoomTarget off`, and
 `scene zoomFOV 180`, returning to the full dome.
