@@ -1,14 +1,19 @@
 import { searchNamedObjects } from './namedObjects.js';
 
 const BASE_URL = 'https://www.datastro.eu';
-const DATASET_PATH = '/api/explore/v2.1/catalog/datasets/deep-sky-objects/records';
 const DEFAULT_LIMIT = 50;
 
-function buildUrl({ where, order_by, limit = DEFAULT_LIMIT, offset = 0 } = {}) {
+// datastro.eu dataset identifiers used by the app.
+export const DATASETS = {
+    deepSky: 'deep-sky-objects',
+    solarSystem: 'donnees-systeme-solaire-solar-system-data',
+};
+
+function buildUrl({ dataset = DATASETS.deepSky, where, order_by, limit = DEFAULT_LIMIT, offset = 0 } = {}) {
     const params = new URLSearchParams({ limit, offset });
     if (where) params.set('where', where);
     if (order_by) params.set('order_by', order_by);
-    return `${BASE_URL}${DATASET_PATH}?${params.toString()}`;
+    return `${BASE_URL}/api/explore/v2.1/catalog/datasets/${dataset}/records?${params.toString()}`;
 }
 
 async function fetchRecords(options = {}) {
@@ -66,4 +71,21 @@ export async function searchObjects(query, { limit, offset, extraWhere } = {}) {
 // Returns { results, totalCount } so callers can paginate.
 export async function fetchObjects(options = {}) {
     return fetchRecords(options);
+}
+
+// The solar-system dataset is only a handful of rows (the Sun and planets), so it's fetched
+// once in full and cached for the session instead of being paginated server-side. A failed
+// request clears the cache so the next call retries.
+let solarSystemRecordsPromise = null;
+
+export function fetchSolarSystemRecords() {
+    if (!solarSystemRecordsPromise) {
+        solarSystemRecordsPromise = fetchRecords({ dataset: DATASETS.solarSystem, limit: 100 })
+            .then(({ results }) => results)
+            .catch((err) => {
+                solarSystemRecordsPromise = null;
+                throw err;
+            });
+    }
+    return solarSystemRecordsPromise;
 }

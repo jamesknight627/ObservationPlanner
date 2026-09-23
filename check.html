@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup Check — Sky Tonight</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .check-page { max-width: 640px; margin: 0 auto; padding: 1.5rem; }
+        .check-list { list-style: none; padding: 0; display: grid; gap: 0.75rem; }
+        .check-list li { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1rem; }
+        .check-list strong { display: block; }
+        .check-result { color: var(--text-muted); font-size: 0.85rem; }
+        .is-pass { border-color: #6fcf97 !important; }
+        .is-fail { border-color: #ff8080 !important; }
+    </style>
+</head>
+<body>
+    <main class="check-page">
+        <h1>Sky Tonight setup check</h1>
+        <p class="empty-state">Open this page from Digistar's web server on the device you'll use in the dome.</p>
+        <ul id="checks" class="check-list"></ul>
+        <p><a class="detail-panel__more" href="index.html">Open the planner</a></p>
+    </main>
+
+    <!-- A classic script on purpose: it has to run even if module scripts are blocked. -->
+    <script>
+        var checks = [
+            {
+                name: 'Digistar web interface',
+                run: function () {
+                    return fetch('/digistar/objects/eye/intensity', { cache: 'no-store' }).then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status + '. Is "system webInterface" on?');
+                        return 'Answering (eye intensity read successfully)';
+                    });
+                }
+            },
+            {
+                name: 'JavaScript files served as JavaScript',
+                run: function () {
+                    return fetch('js/app.js', { cache: 'no-store' }).then(function (r) {
+                        if (!r.ok) throw new Error('js/app.js not found (HTTP ' + r.status + ')');
+                        var type = r.headers.get('content-type') || '(none)';
+                        if (!/javascript|ecmascript/i.test(type)) {
+                            throw new Error('Served as "' + type + '". Browsers won\'t run module scripts with this type, so the planner needs the bundled version.');
+                        }
+                        return 'Served as "' + type + '"';
+                    });
+                }
+            },
+            {
+                name: 'Internet: deep-sky object catalog',
+                run: function () {
+                    return fetch('https://www.datastro.eu/api/explore/v2.1/catalog/datasets/deep-sky-objects/records?limit=1').then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return 'Reachable';
+                    });
+                }
+            },
+            {
+                name: 'Internet: Wikipedia (photos and descriptions)',
+                run: function () {
+                    return fetch('https://en.wikipedia.org/api/rest_v1/page/summary/Messier_31').then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return 'Reachable';
+                    });
+                }
+            }
+        ];
+
+        var list = document.getElementById('checks');
+        checks.forEach(function (check) {
+            var item = document.createElement('li');
+            item.innerHTML = '<strong></strong><span class="check-result">Checking…</span>';
+            item.querySelector('strong').textContent = check.name;
+            list.appendChild(item);
+            var result = item.querySelector('.check-result');
+
+            check.run().then(function (message) {
+                item.classList.add('is-pass');
+                result.textContent = 'Pass: ' + message;
+            }).catch(function (err) {
+                item.classList.add('is-fail');
+                result.textContent = 'Fail: ' + (err.message === 'Failed to fetch' ? 'No connection' : err.message);
+            });
+        });
+    </script>
+</body>
+</html>

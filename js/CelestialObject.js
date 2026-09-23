@@ -5,6 +5,7 @@ import { estimateEquipment, estimateMaxBortle, estimateMinMagnification } from '
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 const SIDEREAL_DEG_PER_HOUR = 360.98564736629 / 24;
+const MS_PER_HOUR = 3600 * 1000;
 
 export class CelestialObject {
     constructor(record) {
@@ -22,14 +23,58 @@ export class CelestialObject {
         this.raw = record;
     }
 
+    // Heading shown on the detail panel / object page (e.g. "M 31").
+    get heading() {
+        return `${this.catalog ?? ''} ${this.catalogId ?? ''}`;
+    }
+
+    // Title shown on result cards (e.g. "Andromeda Galaxy (M31)").
+    get cardTitle() {
+        const catalogLabel = `${this.catalog ?? ''}${this.catalogId ?? ''}`;
+        return this.properName ? `${this.properName} (${catalogLabel})` : catalogLabel;
+    }
+
+    // RA/Dec at a given moment. Deep-sky objects are fixed, so `time` is ignored here;
+    // SolarSystemBody overrides this to compute a moving position. All the visibility
+    // math below goes through this method, so it works for both kinds of object.
+    getEquatorialCoords(time) {
+        if (this.raDeg == null || this.decDeg == null) return null;
+        return { raDeg: this.raDeg, decDeg: this.decDeg };
+    }
+
+    // Hook for objects whose displayed values (magnitude, size, RA/Dec) depend on the date.
+    // Fixed deep-sky objects have nothing to update.
+    setEpoch(date) {}
+
+    // Extra dataset facts to show on the detail views, as [{ label, value, unit }].
+    getPhysicalFacts() {
+        return [];
+    }
+
+    // Wikipedia article titles to try, in order: the proper name, then catalog-specific
+    // naming conventions ("Messier 31", "NGC 224").
+    getWikipediaCandidates() {
+        const candidates = [];
+        if (this.properName) candidates.push(this.properName);
+        if (this.catalog === 'M' && this.catalogId != null) {
+            candidates.push(`Messier ${this.catalogId}`);
+        }
+        if (this.catalog && this.catalogId != null) {
+            candidates.push(`${this.catalog} ${this.catalogId}`);
+        }
+        return candidates;
+    }
+
     // Converts equatorial coords (RA/Dec) to horizontal coords (Alt/Az) for a given location and time.
     toAltAz(location, time) {
+        const coords = this.getEquatorialCoords(time);
+        if (!coords) return null;
         const { latitude, longitude } = location;
         const lst = getLocalSiderealTime(longitude, time);
-        const hourAngleDeg = lst - this.raDeg;
+        const hourAngleDeg = lst - coords.raDeg;
 
         const haRad = hourAngleDeg * DEG_TO_RAD;
-        const decRad = this.decDeg * DEG_TO_RAD;
+        const decRad = coords.decDeg * DEG_TO_RAD;
         const latRad = latitude * DEG_TO_RAD;
 
         const altRad = Math.asin(
@@ -49,9 +94,8 @@ export class CelestialObject {
     }
 
     isVisibleAt(location, time) {
-        if (this.raDeg == null || this.decDeg == null) return false;
-        const { altitude } = this.toAltAz(location, time);
-        return altitude > 0;
+        const altAz = this.toAltAz(location, time);
+        return altAz != null && altAz.altitude > 0;
     }
 
     // Steps forward in 5-minute increments over the next 48h to find the next moment this object rises above the horizon.
@@ -73,12 +117,26 @@ export class CelestialObject {
 
     // Time of the object's next meridian crossing (max altitude / "apex"), solved directly
     // from hour angle = 0 rather than stepping, since the sky rotates at a near-constant rate.
+    // A planet's RA drifts slightly during the wait, so the estimate is then refined against
+    // the RA at the estimated moment; for fixed objects the correction is zero.
     getNextTransitTime(location, from = new Date()) {
-        if (this.raDeg == null) return null;
-        const lst = getLocalSiderealTime(location.longitude, from);
-        const deltaDeg = (this.raDeg - lst + 360) % 360;
-        const hoursUntilTransit = deltaDeg / SIDEREAL_DEG_PER_HOUR;
-        return new Date(from.getTime() + hoursUntilTransit * 3600 * 1000);
+        const start = this.getEquatorialCoords(from);
+        if (!start) return null;
+        const lst0 = getLocalSiderealTime(location.longitude, from);
+        const deltaDeg = (start.raDeg - lst0 + 360) % 360;
+        let t = new Date(from.getTime() + (deltaDeg / SIDEREAL_DEG_PER_HOUR) * MS_PER_HOUR);
+
+        for (let i = 0; i < 4; i++) {
+            const { raDeg } = this.getEquatorialCoords(t);
+            const lst = getLocalSiderealTime(location.longitude, t);
+            const offsetDeg = ((raDeg - lst + 540) % 360) - 180; // signed, in [-180, 180)
+            t = new Date(t.getTime() + (offsetDeg / SIDEREAL_DEG_PER_HOUR) * MS_PER_HOUR);
+            // Refinement can nudge a transit that was due right at `from` to just before it;
+            // in that case the next transit is the following one.
+            if (t < from) t = new Date(t.getTime() + (360 / SIDEREAL_DEG_PER_HOUR) * MS_PER_HOUR);
+            if (Math.abs(offsetDeg) < 0.001) break;
+        }
+        return t;
     }
 
     // Altitude reached at the object's next meridian transit - its highest point in the
@@ -87,7 +145,7 @@ export class CelestialObject {
     getMaxAltitude(location, from = new Date()) {
         const transitTime = this.getNextTransitTime(location, from);
         if (!transitTime) return null;
-        return this.toAltAz(location, transitTime).altitude;
+        return this.toAltAz(location, transitTime)?.altitude ?? null;
     }
 
     // Rise, transit ("apex"), set, and peak altitude for the object's next pass above the
@@ -105,7 +163,7 @@ export class CelestialObject {
             ? new Date(transitTime.getTime() + (transitTime.getTime() - riseTime.getTime()))
             : null;
         const durationMs = riseTime && setTime ? setTime.getTime() - riseTime.getTime() : null;
-        const maxAltitudeDeg = transitTime ? this.toAltAz(location, transitTime).altitude : null;
+        const maxAltitudeDeg = transitTime ? this.toAltAz(location, transitTime)?.altitude ?? null : null;
 
         return { riseTime, transitTime, setTime, durationMs, maxAltitudeDeg };
     }

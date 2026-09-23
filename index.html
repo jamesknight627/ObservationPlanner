@@ -31,14 +31,16 @@
         </nav>
 
         <div id="filters-bar" class="filters" aria-label="Filter results">
-            <label class="filters__checkbox">
-                <input id="all-catalogs-filter" type="checkbox">
-                All catalogs (not just Messier)
+            <label for="dataset-filter">Catalog
+                <select id="dataset-filter">
+                    <option value="messier">Messier objects</option>
+                    <option value="deepSky">All deep-sky objects</option>
+                    <option value="solarSystem">Solar System</option>
+                </select>
             </label>
             <label for="type-filter">Type
                 <select id="type-filter">
-                    <option value="">All types</option>
-                    <!-- populated by js/app.js from js/typeLabels.js -->
+                    <!-- populated by js/app.js from js/typeLabels.js, per selected catalog -->
                 </select>
             </label>
             <label for="magnitude-filter">Brighter than
@@ -64,6 +66,17 @@
             <main id="results" class="object-grid" aria-live="polite">
                 <!-- object cards rendered here by js/render.js -->
             </main>
+
+            <div id="saved-list-toolbar" class="saved-list-toolbar" hidden>
+                <label for="favorites-sort">Sort by
+                    <select id="favorites-sort">
+                        <option value="rise">Rise time</option>
+                        <option value="transit">Apex time</option>
+                        <option value="set">Set time</option>
+                        <option value="duration">Transit duration</option>
+                    </select>
+                </label>
+            </div>
 
             <section id="saved-list" class="saved-list" hidden aria-label="Saved objects">
                 <!-- favorited objects rendered here by js/render.js -->

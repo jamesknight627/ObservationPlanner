@@ -140,6 +140,30 @@ button:focus-visible {
     display: none;
 }
 
+.saved-list-toolbar {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.saved-list-toolbar label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.saved-list-toolbar[hidden] {
+    display: none;
+}
+
 .results-column {
     display: flex;
     flex-direction: column;
@@ -376,6 +400,14 @@ button:focus-visible {
     font-size: 1.1rem;
 }
 
+.observing-guide__warning {
+    color: #ff8080;
+    border-left: 3px solid #ff8080;
+    padding-left: 0.6rem;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
 .observing-guide__disclaimer {
     color: var(--text-muted);
     font-size: 0.8rem;
@@ -413,4 +445,41 @@ button:focus-visible {
     .object-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* Dome control (js/digistar.js) — only visible when served by relay/server.mjs */
+.dome-control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.dome-control[hidden] {
+    display: none;
+}
+
+.dome-button {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.dome-button--secondary {
+    border-color: var(--border);
+    color: var(--text-muted);
+}
+
+.dome-button:disabled {
+    opacity: 0.6;
+    cursor: progress;
+}
+
+.dome-control__status {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.dome-control__status.is-error {
+    color: #ff8080;
 }

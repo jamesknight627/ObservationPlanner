@@ -1,5 +1,5 @@
-import { fetchObjectsByCatalogId } from './api.js';
-import { CelestialObject } from './CelestialObject.js';
+import { fetchObject } from './objectFactory.js';
+import { renderPhysicalFactRows } from './render.js';
 import { findWikipediaSummary } from './wikipedia.js';
 import { parseDetailParams } from './objectLink.js';
 import { getLastLocation } from './storage.js';
@@ -42,15 +42,14 @@ async function init() {
     }
 
     try {
-        const record = await fetchObjectsByCatalogId(catalog, catalogId);
-        if (!record) {
+        const effectiveLocation = location ?? getLastLocation() ?? DEFAULT_LOCATION;
+        const effectiveDate = date ?? new Date();
+        const object = await fetchObject(catalog, catalogId, effectiveDate);
+        if (!object) {
             pageEl.innerHTML = '<p class="error-state">Object not found.</p>';
             return;
         }
 
-        const object = new CelestialObject(record);
-        const effectiveLocation = location ?? getLastLocation() ?? DEFAULT_LOCATION;
-        const effectiveDate = date ?? new Date();
         const visibility = object.getVisibilityWindow(effectiveLocation, effectiveDate);
         const summary = await findWikipediaSummary(object);
 
@@ -79,13 +78,17 @@ function render(object, { visibility, location, summary }) {
         ? `<dt>Name</dt><dd>${object.properName}</dd>`
         : '';
 
-    const { constellationName, minMagnification, equipment, maxBortle } = object.getObservingGuide();
+    const { constellationName, minMagnification, equipment, maxBortle, warning } = object.getObservingGuide();
+
+    const warningBlock = warning
+        ? `<p class="observing-guide__warning" role="alert">${warning}</p>`
+        : '';
 
     pageEl.innerHTML = `
         <div class="object-page__layout">
             <article class="object-page__content">
                 ${imageBlock}
-                <h1>${object.catalog ?? ''} ${object.catalogId ?? ''}</h1>
+                <h1>${object.heading}</h1>
                 ${extractBlock}
                 <dl class="detail-panel__attrs">
                     ${nameRow}
@@ -99,6 +102,7 @@ function render(object, { visibility, location, summary }) {
                     <dt>Max altitude</dt><dd>${formatAltitude(maxAltitudeDeg)}</dd>
                     <dt>Sets at</dt><dd>${formatTime(setTime)}</dd>
                     <dt>Transit duration</dt><dd>${formatDuration(durationMs)}</dd>
+                    ${renderPhysicalFactRows(object)}
                 </dl>
                 ${wikiLink}
             </article>
@@ -106,6 +110,7 @@ function render(object, { visibility, location, summary }) {
             <aside class="observing-guide">
                 <h2>Observing Guide</h2>
                 <p class="observing-guide__disclaimer">Estimated from magnitude and size - a starting point, not a guarantee.</p>
+                ${warningBlock}
                 <dl class="detail-panel__attrs">
                     <dt>Constellation</dt><dd>${constellationName ?? '—'}</dd>
                     <dt>Min. magnification</dt><dd>${formatMagnification(minMagnification)}</dd>

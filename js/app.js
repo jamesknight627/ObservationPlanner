@@ -1,5 +1,6 @@
 import { fetchObjects, searchObjects } from './api.js';
 import { CelestialObject } from './CelestialObject.js';
+import { fetchSolarSystemBodies, objectFromFavorite } from './objectFactory.js';
 import { renderObjectList, renderDetailPanel, setLoadingState, setErrorState } from './render.js';
 import {
     addFavorite,
@@ -12,11 +13,13 @@ import {
     setLastDate,
 } from './storage.js';
 import { geocodeLocation } from './geocode.js';
-import { TYPE_LABELS } from './typeLabels.js';
+import { TYPE_LABELS, SOLAR_SYSTEM_TYPE_LABELS } from './typeLabels.js';
 
 const resultsEl = document.querySelector('#results');
 const detailPanelEl = document.querySelector('#detail-panel');
 const savedListEl = document.querySelector('#saved-list');
+const savedListToolbarEl = document.querySelector('#saved-list-toolbar');
+const favoritesSortEl = document.querySelector('#favorites-sort');
 const searchFormEl = document.querySelector('#search-form');
 const searchInputEl = document.querySelector('#search-input');
 const dateInputEl = document.querySelector('#date-input');
@@ -28,7 +31,7 @@ const prevPageBtn = document.querySelector('#prev-page');
 const nextPageBtn = document.querySelector('#next-page');
 const pageInfoEl = document.querySelector('#page-info');
 const filtersBarEl = document.querySelector('#filters-bar');
-const allCatalogsFilterEl = document.querySelector('#all-catalogs-filter');
+const datasetFilterEl = document.querySelector('#dataset-filter');
 const typeFilterEl = document.querySelector('#type-filter');
 const magnitudeFilterEl = document.querySelector('#magnitude-filter');
 const visibleFilterEl = document.querySelector('#visible-filter');
@@ -44,12 +47,25 @@ const PAGE_SIZE = 20;
 // the API's own per-request max.
 const CLIENT_FILTER_FETCH_LIMIT = 100;
 
-for (const [code, label] of Object.entries(TYPE_LABELS)) {
-    const option = document.createElement('option');
-    option.value = code;
-    option.textContent = label;
-    typeFilterEl?.appendChild(option);
+// Which catalog the planner browses/searches: 'messier', 'deepSky' (all ~227k deep-sky
+// objects), or 'solarSystem' (the Sun and planets, from the solar-system dataset).
+const DEFAULT_CATALOG_SCOPE = 'messier';
+
+// Deep-sky and solar-system objects use different type codes, so the Type dropdown is
+// rebuilt whenever the catalog changes.
+function populateTypeOptions(scope) {
+    if (!typeFilterEl) return;
+    const labels = scope === 'solarSystem' ? SOLAR_SYSTEM_TYPE_LABELS : TYPE_LABELS;
+    typeFilterEl.innerHTML = '<option value="">All types</option>';
+    for (const [code, label] of Object.entries(labels)) {
+        const option = document.createElement('option');
+        option.value = code;
+        option.textContent = label;
+        typeFilterEl.appendChild(option);
+    }
 }
+
+populateTypeOptions(DEFAULT_CATALOG_SCOPE);
 
 const state = {
     location: getLastLocation() ?? { latitude: 40.7128, longitude: -74.006, label: 'New York, NY' },
@@ -60,7 +76,7 @@ const state = {
     page: 0,
     totalCount: 0,
     filters: {
-        allCatalogs: false,
+        catalogScope: DEFAULT_CATALOG_SCOPE,
         type: '',
         maxMagnitude: null,
         visibleOnly: false,
@@ -71,6 +87,7 @@ const state = {
     // Cached full match set when client-side filters are active, so Prev/Next paginate
     // in memory instead of re-fetching and re-filtering on every click.
     filteredResults: null,
+    favoritesSortBy: 'rise',
 };
 
 if (locationInputEl) locationInputEl.value = state.location.label ?? '';
@@ -92,6 +109,10 @@ function toDateInputValue(date) {
 function parseDateInputValue(value) {
     const [year, month, day] = value.split('-').map(Number);
     return new Date(year, month - 1, day);
+}
+
+function isSolarSystemScope() {
+    return state.filters.catalogScope === 'solarSystem';
 }
 
 function hasClientFilters() {
@@ -153,18 +174,41 @@ async function fetchQueryPage(limit, offset) {
     if (state.currentQuery.type === 'search') {
         return searchObjects(state.currentQuery.query, { limit, offset, extraWhere: filterWhere || undefined });
     }
-    const scopeWhere = state.filters.allCatalogs ? '' : 'cat1="M"';
+    const scopeWhere = state.filters.catalogScope === 'messier' ? 'cat1="M"' : '';
     return fetchObjects({ where: combineWhere(scopeWhere, filterWhere), order_by: 'id1', limit, offset });
+}
+
+// The solar-system dataset is tiny, so instead of building an API `where` clause, the
+// search text and type/magnitude filters are applied here, the same way the
+// client-side filters are. Magnitude is the computed one for the selected date.
+function matchesSolarSystemQuery(body) {
+    const { type, maxMagnitude } = state.filters;
+    if (state.currentQuery.type === 'search') {
+        const needle = state.currentQuery.query.toLowerCase();
+        if (!body.name.toLowerCase().includes(needle)) return false;
+    }
+    if (type && body.type !== type) return false;
+    if (maxMagnitude != null && body.magnitude > maxMagnitude) return false;
+    return true;
+}
+
+// Every object matching the current query and all filters, for the in-memory pagination path.
+async function fetchAllMatches() {
+    if (isSolarSystemScope()) {
+        const bodies = await fetchSolarSystemBodies(state.date);
+        return bodies.filter(matchesSolarSystemQuery).filter(matchesClientFilters);
+    }
+    const { results } = await fetchQueryPage(CLIENT_FILTER_FETCH_LIMIT, 0);
+    return results.map(r => new CelestialObject(r)).filter(matchesClientFilters);
 }
 
 async function loadResults() {
     setLoadingState(resultsEl, true);
     setErrorState(resultsEl, null);
     try {
-        if (hasClientFilters()) {
+        if (isSolarSystemScope() || hasClientFilters()) {
             if (state.filteredResults === null) {
-                const { results } = await fetchQueryPage(CLIENT_FILTER_FETCH_LIMIT, 0);
-                state.filteredResults = results.map(r => new CelestialObject(r)).filter(matchesClientFilters);
+                state.filteredResults = await fetchAllMatches();
             }
             state.totalCount = state.filteredResults.length;
             state.objects = state.filteredResults.slice(state.page * PAGE_SIZE, state.page * PAGE_SIZE + PAGE_SIZE);
@@ -208,6 +252,7 @@ function renderPagination() {
 
 function handleSelectObject(object) {
     state.selectedObject = object;
+    object.setEpoch(state.date);
     const visibility = object.getVisibilityWindow(state.location, state.date);
     renderDetailPanel(detailPanelEl, object, {
         visibility,
@@ -228,11 +273,39 @@ function handleToggleFavorite(object, cardEl) {
     renderFavorites();
 }
 
+// Maps the sort-by <select> value to the matching getVisibilityWindow() field.
+const FAVORITES_SORT_FIELDS = {
+    rise: 'riseTime',
+    transit: 'transitTime',
+    set: 'setTime',
+    duration: 'durationMs',
+};
+
 function renderFavorites() {
-    const favorites = getFavorites().map(f => new CelestialObject(f.raw));
+    const favorites = getFavorites()
+        .map(f => objectFromFavorite(f, state.date))
+        .filter(Boolean);
+
+    const field = FAVORITES_SORT_FIELDS[state.favoritesSortBy] ?? 'riseTime';
+    const sorted = favorites
+        .map((object) => {
+            const value = object.getVisibilityWindow(state.location, state.date)[field];
+            const sortKey = value instanceof Date ? value.getTime() : value;
+            return { object, sortKey };
+        })
+        // Objects with no sort key (e.g. never rises/sets that day) sort to the end
+        // rather than before everything, so they don't push valid results down.
+        .sort((a, b) => {
+            if (a.sortKey == null && b.sortKey == null) return 0;
+            if (a.sortKey == null) return 1;
+            if (b.sortKey == null) return -1;
+            return a.sortKey - b.sortKey;
+        })
+        .map((entry) => entry.object);
+
     renderObjectList(
         savedListEl,
-        favorites,
+        sorted,
         { onSelect: handleSelectObject, onToggleFavorite: handleToggleFavorite },
         'No saved objects yet. Click the star on any object to save it.'
     );
@@ -245,6 +318,7 @@ tabButtons.forEach((btn) => {
         resultsEl.hidden = isSaved;
         savedListEl.hidden = !isSaved;
         if (filtersBarEl) filtersBarEl.hidden = isSaved;
+        if (savedListToolbarEl) savedListToolbarEl.hidden = !isSaved;
         if (isSaved) {
             renderFavorites();
             if (paginationEl) paginationEl.hidden = true;
@@ -263,8 +337,10 @@ searchFormEl?.addEventListener('submit', (e) => {
     refreshResults();
 });
 
-allCatalogsFilterEl?.addEventListener('change', () => {
-    state.filters.allCatalogs = allCatalogsFilterEl.checked;
+datasetFilterEl?.addEventListener('change', () => {
+    state.filters.catalogScope = datasetFilterEl.value;
+    state.filters.type = '';
+    populateTypeOptions(state.filters.catalogScope);
     refreshResults();
 });
 
@@ -300,9 +376,14 @@ apexEndFilterEl?.addEventListener('change', () => {
     refreshResults();
 });
 
+favoritesSortEl?.addEventListener('change', () => {
+    state.favoritesSortBy = favoritesSortEl.value;
+    renderFavorites();
+});
+
 clearFiltersBtn?.addEventListener('click', () => {
     state.filters = {
-        allCatalogs: false,
+        catalogScope: DEFAULT_CATALOG_SCOPE,
         type: '',
         maxMagnitude: null,
         visibleOnly: false,
@@ -310,8 +391,8 @@ clearFiltersBtn?.addEventListener('click', () => {
         apexStart: '',
         apexEnd: '',
     };
-    if (allCatalogsFilterEl) allCatalogsFilterEl.checked = false;
-    if (typeFilterEl) typeFilterEl.value = '';
+    if (datasetFilterEl) datasetFilterEl.value = DEFAULT_CATALOG_SCOPE;
+    populateTypeOptions(DEFAULT_CATALOG_SCOPE);
     if (magnitudeFilterEl) magnitudeFilterEl.value = '';
     if (visibleFilterEl) visibleFilterEl.checked = false;
     if (altitudeFilterEl) altitudeFilterEl.value = '';
@@ -360,7 +441,10 @@ dateInputEl?.addEventListener('change', () => {
     state.date = parseDateInputValue(dateInputEl.value);
     setLastDate(state.date);
     if (state.selectedObject) handleSelectObject(state.selectedObject);
-    if (hasClientFilters()) refreshResults();
+    // Planet positions and brightness depend on the date, so solar-system results are
+    // rebuilt too (the dataset itself is cached, so this doesn't re-fetch it).
+    if (hasClientFilters() || isSolarSystemScope()) refreshResults();
+    renderFavorites();
 });
 
 loadResults();

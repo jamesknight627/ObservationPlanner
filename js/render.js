@@ -9,8 +9,10 @@ import {
     formatAngularSize,
     formatAltitude,
     formatCoords,
+    formatQuantity,
 } from './format.js';
 import { getTypeLabel } from './typeLabels.js';
+import { createDomeControl } from './digistar.js';
 
 export function renderObjectCard(object, { onSelect, onToggleFavorite } = {}) {
     const card = document.createElement('article');
@@ -22,13 +24,11 @@ export function renderObjectCard(object, { onSelect, onToggleFavorite } = {}) {
     const favorited = isFavorite(object.catalog, object.catalogId);
     if (favorited) card.classList.add('is-favorite');
 
-    const catalogLabel = `${object.catalog ?? ''}${object.catalogId ?? ''}`;
-    const title = object.properName ? `${object.properName} (${catalogLabel})` : catalogLabel;
     const { equipment } = object.getObservingGuide();
 
     card.innerHTML = `
         <button class="favorite-toggle" aria-label="Toggle favorite" aria-pressed="${favorited}">★</button>
-        <h3 class="object-card__name">${title}</h3>
+        <h3 class="object-card__name">${object.cardTitle}</h3>
         <p class="object-card__type">${getTypeLabel(object.type)}</p>
         <p class="object-card__mag">${formatMagnitude(object.magnitude)}</p>
         <p class="object-card__equipment">${equipment ?? '—'}</p>
@@ -58,6 +58,14 @@ export function renderObjectList(container, objects, handlers, emptyMessage = 'N
     container.appendChild(fragment);
 }
 
+// <dt>/<dd> rows for any extra dataset facts the object provides (solar-system bodies
+// have diameter, gravity, etc.; deep-sky objects have none).
+export function renderPhysicalFactRows(object) {
+    return object.getPhysicalFacts()
+        .map(({ label, value, unit }) => `<dt>${label}</dt><dd>${formatQuantity(value, unit)}</dd>`)
+        .join('');
+}
+
 export function renderDetailPanel(panel, object, { visibility, location, date, onClose } = {}) {
     const { riseTime, transitTime, setTime, durationMs, maxAltitudeDeg } = visibility ?? {};
 
@@ -71,7 +79,7 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
 
     panel.innerHTML = `
         <button class="detail-panel__close" aria-label="Close detail panel">×</button>
-        <h2>${object.catalog ?? ''} ${object.catalogId ?? ''}</h2>
+        <h2>${object.heading}</h2>
         <dl class="detail-panel__attrs">
             ${nameRow}
             <dt>Type</dt><dd>${getTypeLabel(object.type)}</dd>
@@ -84,6 +92,7 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
             <dt>Max altitude</dt><dd>${formatAltitude(maxAltitudeDeg)}</dd>
             <dt>Sets at</dt><dd>${formatTime(setTime)}</dd>
             <dt>Transit duration</dt><dd>${formatDuration(durationMs)}</dd>
+            ${renderPhysicalFactRows(object)}
         </dl>
         <a class="detail-panel__more" href="${buildDetailUrl(object, location, date)}">More details →</a>
     `;
@@ -93,6 +102,18 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
         panel.innerHTML = '';
         onClose?.();
     });
+
+    // Hidden until isDomeAvailable() confirms Digistar's web interface is answering, so
+    // this is a no-op outside the dome (see js/digistar.js).
+    panel.appendChild(createDomeControl({
+        name: object.name,
+        ra: object.raDeg,
+        dec: object.decDeg,
+        size: object.angularSize,
+        date,
+        lat: location?.latitude,
+        lon: location?.longitude,
+    }));
 }
 
 export function setLoadingState(container, isLoading) {

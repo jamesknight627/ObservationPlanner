@@ -14,12 +14,19 @@ export function buildDetailUrl(object, location, date) {
     return `object.html?${params.toString()}`;
 }
 
+// Deep-sky IDs are numeric; solar-system IDs are body keys like "jupiter".
+function parseCatalogId(raw) {
+    if (!raw) return null;
+    const asNumber = Number(raw);
+    return Number.isNaN(asNumber) ? raw : asNumber;
+}
+
 export function parseDetailParams(searchParams) {
     const lat = searchParams.get('lat');
     const lon = searchParams.get('lon');
     return {
         catalog: searchParams.get('cat'),
-        catalogId: searchParams.get('id') ? Number(searchParams.get('id')) : null,
+        catalogId: parseCatalogId(searchParams.get('id')),
         location: lat && lon
             ? { latitude: Number(lat), longitude: Number(lon), label: searchParams.get('label') ?? undefined }
             : null,
