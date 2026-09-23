@@ -38,6 +38,8 @@ const visibleFilterEl = document.querySelector('#visible-filter');
 const altitudeFilterEl = document.querySelector('#altitude-filter');
 const apexStartFilterEl = document.querySelector('#apex-start-filter');
 const apexEndFilterEl = document.querySelector('#apex-end-filter');
+const windowStartFilterEl = document.querySelector('#window-start-filter');
+const windowEndFilterEl = document.querySelector('#window-end-filter');
 const clearFiltersBtn = document.querySelector('#clear-filters');
 
 const PAGE_SIZE = 20;
@@ -83,6 +85,8 @@ const state = {
         minMaxAltitude: null,
         apexStart: '',
         apexEnd: '',
+        windowStart: '',
+        windowEnd: '',
     },
     // Cached full match set when client-side filters are active, so Prev/Next paginate
     // in memory instead of re-fetching and re-filtering on every click.
@@ -119,7 +123,8 @@ function hasClientFilters() {
     return (
         state.filters.visibleOnly ||
         state.filters.minMaxAltitude != null ||
-        (state.filters.apexStart && state.filters.apexEnd)
+        (state.filters.apexStart && state.filters.apexEnd) ||
+        (state.filters.windowStart && state.filters.windowEnd)
     );
 }
 
@@ -144,19 +149,41 @@ function timeOnDate(date, hhmm) {
     return result;
 }
 
-function isTransitInRange(transitTime, date, startStr, endStr) {
-    if (!transitTime) return false;
+// Start/end Dates for a "HH:MM"-"HH:MM" range on the given day, pushing `end` a day
+// forward when it's not after `start` (the range wraps past midnight, e.g. 22:00-02:00).
+function buildWindowRange(date, startStr, endStr) {
     const start = timeOnDate(date, startStr);
     let end = timeOnDate(date, endStr);
-    if (end <= start) end = new Date(end.getTime() + 24 * 60 * 60 * 1000); // range wraps past midnight
+    if (end <= start) end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+    return { start, end };
+}
 
-    let t = transitTime;
-    if (t < start) t = new Date(t.getTime() + 24 * 60 * 60 * 1000);
+// Moves a time forward a day if it falls before `start`, so a time that's technically
+// earlier in the clock (e.g. 01:00) is compared as part of the night that started the
+// evening before, matching how `start`/`end` from buildWindowRange() wrap past midnight.
+function shiftIntoWindow(time, start) {
+    return time < start ? new Date(time.getTime() + 24 * 60 * 60 * 1000) : time;
+}
+
+function isTransitInRange(transitTime, date, startStr, endStr) {
+    if (!transitTime) return false;
+    const { start, end } = buildWindowRange(date, startStr, endStr);
+    const t = shiftIntoWindow(transitTime, start);
     return t >= start && t <= end;
 }
 
+// True if the object's rise-to-set span overlaps the given window at all (not just its
+// apex) - i.e. it's above the horizon for at least part of the window. Unlike
+// isTransitInRange(), riseTime/setTime need no shifting: both are already absolute Dates
+// on the same timeline as `date`, so a plain interval-overlap check is correct as-is.
+function isVisibleDuringWindow(riseTime, setTime, date, startStr, endStr) {
+    if (!riseTime || !setTime) return false;
+    const { start, end } = buildWindowRange(date, startStr, endStr);
+    return riseTime <= end && setTime >= start;
+}
+
 function matchesClientFilters(object) {
-    const { visibleOnly, minMaxAltitude, apexStart, apexEnd } = state.filters;
+    const { visibleOnly, minMaxAltitude, apexStart, apexEnd, windowStart, windowEnd } = state.filters;
     if (visibleOnly && !object.isVisibleAt(state.location, state.date)) return false;
     if (minMaxAltitude != null) {
         const maxAltitude = object.getMaxAltitude(state.location, state.date);
@@ -165,6 +192,10 @@ function matchesClientFilters(object) {
     if (apexStart && apexEnd) {
         const transitTime = object.getNextTransitTime(state.location, state.date);
         if (!isTransitInRange(transitTime, state.date, apexStart, apexEnd)) return false;
+    }
+    if (windowStart && windowEnd) {
+        const { riseTime, setTime } = object.getVisibilityWindow(state.location, state.date);
+        if (!isVisibleDuringWindow(riseTime, setTime, state.date, windowStart, windowEnd)) return false;
     }
     return true;
 }
@@ -376,6 +407,16 @@ apexEndFilterEl?.addEventListener('change', () => {
     refreshResults();
 });
 
+windowStartFilterEl?.addEventListener('change', () => {
+    state.filters.windowStart = windowStartFilterEl.value;
+    refreshResults();
+});
+
+windowEndFilterEl?.addEventListener('change', () => {
+    state.filters.windowEnd = windowEndFilterEl.value;
+    refreshResults();
+});
+
 favoritesSortEl?.addEventListener('change', () => {
     state.favoritesSortBy = favoritesSortEl.value;
     renderFavorites();
@@ -390,6 +431,8 @@ clearFiltersBtn?.addEventListener('click', () => {
         minMaxAltitude: null,
         apexStart: '',
         apexEnd: '',
+        windowStart: '',
+        windowEnd: '',
     };
     if (datasetFilterEl) datasetFilterEl.value = DEFAULT_CATALOG_SCOPE;
     populateTypeOptions(DEFAULT_CATALOG_SCOPE);
@@ -398,6 +441,8 @@ clearFiltersBtn?.addEventListener('click', () => {
     if (altitudeFilterEl) altitudeFilterEl.value = '';
     if (apexStartFilterEl) apexStartFilterEl.value = '';
     if (apexEndFilterEl) apexEndFilterEl.value = '';
+    if (windowStartFilterEl) windowStartFilterEl.value = '';
+    if (windowEndFilterEl) windowEndFilterEl.value = '';
     refreshResults();
 });
 
