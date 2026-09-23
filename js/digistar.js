@@ -69,7 +69,11 @@ function buildGotoCommands(target) {
         commands.push(`navigation location ${lat} ${lon} ground 20 180 duration 0`);
     }
     if (DOME_SETTINGS.syncSky && date instanceof Date && !Number.isNaN(date.getTime())) {
-        commands.push(`scene date ${toDigistarDate(date)} ut`);
+        // No trailing "ut" scale keyword: some Digistar 7 installs reject it as an
+        // unexpected token even though the User's Guide documents it. UT is the
+        // default time scale anyway (see toDigistarDate() above), so omitting it
+        // doesn't change what gets sent.
+        commands.push(`scene date ${toDigistarDate(date)}`);
     }
     if (commands.length > 0) {
         commands.push("sky on"); // re-display the sky for the new location/date
