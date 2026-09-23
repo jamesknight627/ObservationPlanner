@@ -12,6 +12,7 @@ import {
     formatQuantity,
 } from './format.js';
 import { getTypeLabel } from './typeLabels.js';
+import { createDomeControl } from './digistar.js';
 
 export function renderObjectCard(object, { onSelect, onToggleFavorite } = {}) {
     const card = document.createElement('article');
@@ -101,6 +102,18 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
         panel.innerHTML = '';
         onClose?.();
     });
+
+    // Hidden until isDomeAvailable() confirms Digistar's web interface is answering, so
+    // this is a no-op outside the dome (see js/digistar.js).
+    panel.appendChild(createDomeControl({
+        name: object.name,
+        ra: object.raDeg,
+        dec: object.decDeg,
+        size: object.angularSize,
+        date,
+        lat: location?.latitude,
+        lon: location?.longitude,
+    }));
 }
 
 export function setLoadingState(container, isLoading) {
