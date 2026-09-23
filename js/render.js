@@ -105,12 +105,15 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
 
     // Hidden until isDomeAvailable() confirms Digistar's web interface is answering, so
     // this is a no-op outside the dome (see js/digistar.js).
+    // Scene date is the object's transit, not the planner's selected date (which has no
+    // time-of-day once a date is picked) - otherwise the dome could zoom to the object
+    // while it's still below the horizon.
     panel.appendChild(createDomeControl({
         name: object.name,
         ra: object.raDeg,
         dec: object.decDeg,
         size: object.angularSize,
-        date,
+        date: transitTime,
         lat: location?.latitude,
         lon: location?.longitude,
     }));
