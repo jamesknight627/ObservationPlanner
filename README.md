@@ -6,7 +6,8 @@ date and location, browse or search deep-sky objects, see when they rise, peak,
 and set from your sky, and save favorites for next time.
 
 When hosted on an Evans & Sutherland Digistar 7 planetarium system, it can also
-point the dome at any object in the planner with one click.
+show any Messier or supported NGC object in the planner on the dome, with a
+marker and label, with one click.
 
 
 ## Features
@@ -32,8 +33,11 @@ point the dome at any object in the planner with one click.
 - **Planetarium dome control (Digistar 7)** — when the site is served by
   Digistar's built-in web server, the detail panel gains **Show on dome** and
   **Reset dome view** buttons. Show on dome sets the dome's sky to the
-  planner's location and the object's transit time, slews to the object, and
-  zooms in to frame it. Anywhere else, these buttons simply don't appear.
+  planner's location and the object's transit time, then adds the object with
+  its marker and label — for objects in Digistar's built-in library (Messier
+  and a set of NGC objects; see [How the dome control
+  works](#how-the-dome-control-works)). Anywhere else, these buttons simply
+  don't appear.
 
 ## Running it
 
@@ -225,52 +229,54 @@ On page load it reads a harmless attribute (`/digistar/objects/eye/intensity`)
 to check that Digistar is answering. If it isn't, the dome buttons stay hidden,
 which is why the same files work as a plain planner on any other host.
 
-Clicking **Show on dome** for the Andromeda Galaxy on September 10, 2026, viewed
-from New York (the planner's default location), sends:
+**Show on dome** doesn't slew the dome's view or zoom in — it adds the object
+as one of Digistar's own built-in system objects, and turns on its marker and
+label, wherever it happens to be in the current sky. Clicking it for the
+Hercules Cluster (M13) sends:
 
 ```
 navigation location 40.7128 -74.006 ground 20 180 duration 0
-scene date 2026-09-10 06:21:32
+scene date 2026-09-24 21:22:50
 sky on
-telescope zoom position celestial 0.71231 41.26900 1000 ly duration 5
-zoomTarget on
-scene zoomFOV 12.67 duration 10 1 8
+scene add M13
+M13 on
+M13Marker on
+M13Label on
 ```
 
 - The first three lines move the dome's observer to the planner's location and
-  set the scene date to the object's next transit, so it appears at its highest
-  point on the chosen night. `sky on` redisplays the sky for that location and
-  date.
-- The last three slew to the object, show Digistar's zoom-target marker, and
-  zoom to about four times the object's angular size (between 0.5° and 30°).
-- Digistar takes right ascension in **hours**, so the planner's degrees are
-  divided by 15. Digistar also requires a distance; the catalog has none, and
-  from Earth only direction matters, so a nominal 1000 ly is used.
+  set the scene date to the object's next transit, so it's above the horizon
+  on the chosen night. `sky on` redisplays the sky for that location and date.
+- `scene add` adds the object's image to the scene, then `M13 on` displays it.
+  `M13Marker on` and `M13Label on` turn on its paired marker and label system
+  objects (confirmed on real hardware that the marker needs no separate
+  `scene add`; the label is assumed to behave the same way since it's the same
+  kind of paired object, but that specific case hasn't been tested).
 - `scene date` is sent without a trailing time-scale keyword. The User's Guide
   documents one (e.g. `ut`), but some Digistar 7 installs reject it as an
   unexpected token; UT is the default time scale either way, so the date/time
   sent is unaffected.
 
-**Reset dome view** sends `telescope zoom stop`, `zoomTarget off`, and
-`scene zoomFOV 180`, returning to the full dome.
+**Reset dome view** sends `M13 off`, `M13Marker off`, and `M13Label off` for
+whichever object was last shown.
 
-The dome buttons don't appear for objects that never rise above the horizon
-from the chosen location. Digistar's documentation notes that zooming to a
-position below the horizon produces a "black hole" effect on the opposite side
-of the dome.
+Only objects Digistar has as built-in named system objects can be shown this
+way: Messier M1–M110, and a fixed set of about 200 NGC objects (see
+`SUPPORTED_NGC_NUMBERS` in `js/digistar.js`, from the Digistar 7 User's Guide's
+system object list). Everything else — the rest of the deep-sky catalog, and
+all solar-system bodies — isn't in Digistar's built-in library, so the button
+shows a clear "isn't in Digistar's object library" message instead of
+attempting anything.
 
 Behavior can be adjusted in the `DOME_SETTINGS` block at the top of
 `js/digistar.js`:
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `syncSky` | `true` | Match the dome's location and date to the planner. Turn off to leave the current sky alone and only point and zoom. |
-| `zoomIn` | `true` | Zoom in to frame the object after pointing at it. |
-| `slewSeconds` | `5` | Time to swing to the object (and to zoom back out on reset). |
-| `zoomSeconds` | `10` | Time to zoom in. |
+| `syncSky` | `true` | Match the dome's location and date to the planner before showing the object. Turn off to leave the current sky alone. |
 
-Only validated numbers are ever placed into commands; object names are not
-sent to Digistar.
+Object names sent to Digistar always come from the `SUPPORTED_NGC_NUMBERS`
+allow-list or the M1–M110 range check — never from arbitrary user input.
 
 ## Known limitations
 

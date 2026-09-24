@@ -110,9 +110,8 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
     // while it's still below the horizon.
     panel.appendChild(createDomeControl({
         name: object.name,
-        ra: object.raDeg,
-        dec: object.decDeg,
-        size: object.angularSize,
+        catalog: object.catalog,
+        catalogId: object.catalogId,
         date: transitTime,
         lat: location?.latitude,
         lon: location?.longitude,
