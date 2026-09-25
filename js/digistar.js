@@ -185,11 +185,15 @@ function requireDigistarName(target) {
 /**
  * Shows a target on the dome: syncs location/date, then adds the object with
  * its marker and label. Only objects in Digistar's built-in library (Messier
- * M1-M110, a fixed set of NGC objects) can be shown this way.
- * @param {{name: string, catalog: string, catalogId: string|number, date?: Date, lat?: number, lon?: number}} target
+ * M1-M110, a fixed set of NGC objects) can be shown this way, and only when
+ * their apex is above the horizon for the synced location/date.
+ * @param {{name: string, catalog: string, catalogId: string|number, date?: Date, lat?: number, lon?: number, apexBelowHorizon?: boolean}} target
  */
 export function sendToDome(target) {
     const digistarName = requireDigistarName(target);
+    if (target.apexBelowHorizon) {
+        throw new Error(`${target.name} doesn't rise above the horizon from this location and date`);
+    }
     return sendCommands([...buildSyncCommands(target.date, target.lat, target.lon), ...buildShowCommands(digistarName)]);
 }
 
