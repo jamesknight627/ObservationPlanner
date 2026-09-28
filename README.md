@@ -231,13 +231,32 @@ which is why the same files work as a plain planner on any other host.
 
 **Show on dome** doesn't slew the dome's view or zoom in — it adds the object
 as one of Digistar's own built-in system objects, and turns on its marker and
-label, wherever it happens to be in the current sky. Clicking it for the
-Hercules Cluster (M13) sends:
+label, wherever it happens to be in the current sky. The first click of a
+Digistar session also creates two on-dome text labels (see below). Clicking it
+for the Hercules Cluster (M13) sends:
 
 ```
 navigation location 40.7128 -74.006 ground 20 180 duration 0
 scene date 2026-09-24 21:22:50
 sky on
+skyTonightDateTime is textClass
+skyTonightDateTime origin "center"
+skyTonightDateTime alignment "center"
+skyTonightDateTime text "Date: {0%b %d, %Y}|Time: {0%T}"
+skyTonightDateTime parameter size 1
+skyTonightDateTime parameter 0 scene date
+skyTonightDateTime color white
+skyTonightDateTime intensity 100
+skyTonightDateTime position spherical 0 5 1 m
+eye add skyTonightDateTime
+skyTonightLocation is textClass
+skyTonightLocation origin "center"
+skyTonightLocation alignment "center"
+skyTonightLocation color white
+skyTonightLocation intensity 100
+skyTonightLocation position spherical 0 -5 1 m
+eye add skyTonightLocation
+skyTonightLocation text "New York, NY"
 scene add M13
 M13 on
 M13Marker on
@@ -247,6 +266,14 @@ M13Label on
 - The first three lines move the dome's observer to the planner's location and
   set the scene date to the object's next transit, so it's above the horizon
   on the chosen night. `sky on` redisplays the sky for that location and date.
+  **Show on dome** refuses to run at all (no commands sent) if the object's
+  apex doesn't clear the horizon there - Digistar would otherwise zoom to a
+  point below the horizon, which its documentation notes produces a "black
+  hole" effect on the opposite side of the dome.
+- The `skyTonightDateTime`/`skyTonightLocation` block (see [On-dome date/time
+  and location labels](#on-dome-datetime-and-location-labels)) only runs once
+  per Digistar session - later clicks just refresh `skyTonightLocation`'s text
+  in case the planner's location changed, then skip straight to `scene add`.
 - `scene add` adds the object's image to the scene, then `M13 on` displays it.
   `M13Marker on` and `M13Label on` turn on its paired marker and label system
   objects (confirmed on real hardware that the marker needs no separate
@@ -255,10 +282,14 @@ M13Label on
 - `scene date` is sent without a trailing time-scale keyword. The User's Guide
   documents one (e.g. `ut`), but some Digistar 7 installs reject it as an
   unexpected token; UT is the default time scale either way, so the date/time
-  sent is unaffected.
+  sent is unaffected. The `scene date` command's own reference confirms this
+  same human-readable format is the correct input - the Julian date shown in
+  its example (`# JD=2455208.2048`) is just a comment on what that calendar
+  string converts to internally, not an alternate input format.
 
 **Reset dome view** sends `M13 off`, `M13Marker off`, and `M13Label off` for
-whichever object was last shown.
+whichever object was last shown. It doesn't touch the date/time/location
+labels - they're a persistent on-dome display, not tied to any one object.
 
 Only objects Digistar has as built-in named system objects can be shown this
 way: Messier M1–M110, and a fixed set of about 200 NGC objects (see
@@ -273,10 +304,31 @@ Behavior can be adjusted in the `DOME_SETTINGS` block at the top of
 
 | Setting | Default | Effect |
 | --- | --- | --- |
-| `syncSky` | `true` | Match the dome's location and date to the planner before showing the object. Turn off to leave the current sky alone. |
+| `syncSky` | `true` | Match the dome's location and date to the planner before showing the object, and create/update the date/time and location labels. Turn off to leave the current sky alone. |
 
 Object names sent to Digistar always come from the `SUPPORTED_NGC_NUMBERS`
-allow-list or the M1–M110 range check — never from arbitrary user input.
+allow-list or the M1–M110 range check — never from arbitrary user input. The
+location label's text is stripped of any `"` characters before being sent,
+since Digistar string arguments are double-quoted.
+
+### On-dome date/time and location labels
+
+Two custom `textClass` objects (`js/digistar.js`'s `buildLabelCommands()`),
+parented to `eye` rather than `scene` so they act as a fixed on-screen display
+rather than sitting at a point in the sky:
+
+- `skyTonightDateTime` — its `text` binds to `parameter 0`, which is tied to
+  the `scene` object's own `date` attribute (`parameter 0 scene date`), so it
+  keeps itself current as the scene date changes rather than needing to be
+  re-sent. The `{0%b %d, %Y}`/`{0%T}` format specifiers are `strftime`-style,
+  per the `textClass` reference's formatted-text support.
+- `skyTonightLocation` — a plain static label, refreshed with the planner's
+  location string (e.g. "New York, NY") on every **Show on dome** click.
+
+Both are created once per Digistar session (a module-level flag in
+`js/digistar.js` tracks this, not anything persisted) using Digistar's
+`<name> is <class>` object-creation syntax, confirmed working on real
+hardware. Re-running that creation command isn't attempted on later clicks.
 
 ## Known limitations
 
@@ -313,3 +365,10 @@ allow-list or the M1–M110 range check — never from arbitrary user input.
   one, and vice versa.
 - Inside a Digistar control panel, the "View on Wikipedia" link opens in a new
   window, which will likely be the Host computer's regular browser.
+- The "labels created once per Digistar session" tracking in
+  `buildLabelCommands()` is a page-load-scoped JS variable, not anything
+  Digistar-side. Reloading the planner page (without also clearing the
+  `skyTonightDateTime`/`skyTonightLocation` objects on the dome first) will
+  try to re-create them from scratch; this hasn't been tested against
+  whatever Digistar does when `<name> is <class>` targets a name that's
+  already in use.

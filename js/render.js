@@ -120,6 +120,7 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
         date: transitTime,
         lat: location?.latitude,
         lon: location?.longitude,
+        locationLabel: location?.label,
         apexBelowHorizon,
     }));
 }

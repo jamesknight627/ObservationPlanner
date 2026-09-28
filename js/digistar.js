@@ -101,6 +101,61 @@ function buildSyncCommands(date, lat, lon) {
     return commands;
 }
 
+// ---------------------------------------------------------------------------
+// On-dome date/time and location labels. Two custom textClass objects, parented
+// to the eye (camera) rather than the scene, so they read as a fixed on-screen
+// HUD rather than sitting at a spot in the sky. Created once per page load -
+// confirmed on real hardware that "<name> is <class>" defines the object and
+// sets it up ready to display, with no separate "on" needed once it's added as
+// a child (unlike the reserved system objects in buildShowCommands(), which
+// are hidden until turned on explicitly).
+// ---------------------------------------------------------------------------
+const DATETIME_TEXT_NAME = "skyTonightDateTime";
+const LOCATION_TEXT_NAME = "skyTonightLocation";
+
+let labelObjectsCreated = false;
+
+// Digistar strings are double-quoted; strip any stray quotes from a location
+// label (e.g. a geocoded place name) rather than trying to guess its escape
+// syntax.
+function toDigistarString(text) {
+    return text.replace(/"/g, "");
+}
+
+function buildLabelCommands(locationLabel) {
+    if (!DOME_SETTINGS.syncSky) return [];
+
+    const commands = [];
+    if (!labelObjectsCreated) {
+        commands.push(
+            `${DATETIME_TEXT_NAME} is textClass`,
+            `${DATETIME_TEXT_NAME} origin "center"`,
+            `${DATETIME_TEXT_NAME} alignment "center"`,
+            `${DATETIME_TEXT_NAME} text "Date: {0%b %d, %Y}|Time: {0%T}"`,
+            `${DATETIME_TEXT_NAME} parameter size 1`,
+            `${DATETIME_TEXT_NAME} parameter 0 scene date`,
+            `${DATETIME_TEXT_NAME} color white`,
+            `${DATETIME_TEXT_NAME} intensity 100`,
+            `${DATETIME_TEXT_NAME} position spherical 0 5 1 m`,
+            `eye add ${DATETIME_TEXT_NAME}`,
+            `${LOCATION_TEXT_NAME} is textClass`,
+            `${LOCATION_TEXT_NAME} origin "center"`,
+            `${LOCATION_TEXT_NAME} alignment "center"`,
+            `${LOCATION_TEXT_NAME} color white`,
+            `${LOCATION_TEXT_NAME} intensity 100`,
+            `${LOCATION_TEXT_NAME} position spherical 0 -5 1 m`,
+            `eye add ${LOCATION_TEXT_NAME}`,
+        );
+        labelObjectsCreated = true;
+    }
+    // Refreshed on every call (not just at creation) so a later click with a
+    // different planner location keeps the on-dome text current.
+    if (locationLabel) {
+        commands.push(`${LOCATION_TEXT_NAME} text "${toDigistarString(locationLabel)}"`);
+    }
+    return commands;
+}
+
 // Adds the object's image to the scene, then turns on its marker and label.
 // Only the image needs "scene add" first - confirmed on real hardware that its
 // marker turns on directly without it. The label is assumed to behave the same
@@ -183,18 +238,23 @@ function requireDigistarName(target) {
 }
 
 /**
- * Shows a target on the dome: syncs location/date, then adds the object with
- * its marker and label. Only objects in Digistar's built-in library (Messier
- * M1-M110, a fixed set of NGC objects) can be shown this way, and only when
- * their apex is above the horizon for the synced location/date.
- * @param {{name: string, catalog: string, catalogId: string|number, date?: Date, lat?: number, lon?: number, apexBelowHorizon?: boolean}} target
+ * Shows a target on the dome: syncs location/date, refreshes the on-dome
+ * date/time and location labels, then adds the object with its marker and
+ * label. Only objects in Digistar's built-in library (Messier M1-M110, a
+ * fixed set of NGC objects) can be shown this way, and only when their apex
+ * is above the horizon for the synced location/date.
+ * @param {{name: string, catalog: string, catalogId: string|number, date?: Date, lat?: number, lon?: number, locationLabel?: string, apexBelowHorizon?: boolean}} target
  */
 export function sendToDome(target) {
     const digistarName = requireDigistarName(target);
     if (target.apexBelowHorizon) {
         throw new Error(`${target.name} doesn't rise above the horizon from this location and date`);
     }
-    return sendCommands([...buildSyncCommands(target.date, target.lat, target.lon), ...buildShowCommands(digistarName)]);
+    return sendCommands([
+        ...buildSyncCommands(target.date, target.lat, target.lon),
+        ...buildLabelCommands(target.locationLabel),
+        ...buildShowCommands(digistarName),
+    ]);
 }
 
 // Turns off the object, its marker, and its label.
