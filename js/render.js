@@ -105,19 +105,20 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
 
     // Hidden until isDomeAvailable() confirms Digistar's web interface is answering, so
     // this is a no-op outside the dome (see js/digistar.js).
-    // Scene date is the object's transit, not the planner's selected date (which has no
-    // time-of-day once a date is picked) - otherwise the dome could zoom to the object
-    // while it's still below the horizon.
+    // Scene date is the object's next rise, not the planner's selected date (which has
+    // no time-of-day once a date is picked) - otherwise the dome could zoom to the
+    // object while it's still below the horizon.
     // transitTime is only null in two cases: the object is circumpolar (always above the
     // horizon - getNextRiseTime never finds a rise because it's already up) or it never
     // rises at all. isVisibleAt() disambiguates those; when transitTime IS set, the apex
-    // is above the horizon by definition, so there's nothing to check.
+    // (and so also the rise, which precedes it) is above the horizon, so there's nothing
+    // to check.
     const apexBelowHorizon = transitTime ? false : !object.isVisibleAt(location, date);
     panel.appendChild(createDomeControl({
         name: object.name,
         catalog: object.catalog,
         catalogId: object.catalogId,
-        date: transitTime,
+        date: riseTime,
         lat: location?.latitude,
         lon: location?.longitude,
         locationLabel: location?.label,

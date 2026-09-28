@@ -33,7 +33,7 @@ marker and label, with one click.
 - **Planetarium dome control (Digistar 7)** — when the site is served by
   Digistar's built-in web server, the detail panel gains **Show on dome** and
   **Reset dome view** buttons. Show on dome sets the dome's sky to the
-  planner's location and the object's transit time, then adds the object with
+  planner's location and the object's next rise time, then adds the object with
   its marker and label — for objects in Digistar's built-in library (Messier
   and a set of NGC objects; see [How the dome control
   works](#how-the-dome-control-works)). Anywhere else, these buttons simply
@@ -266,8 +266,9 @@ M13Label daylight off
 ```
 
 - The first three lines move the dome's observer to the planner's location and
-  set the scene date to the object's next transit, so it's above the horizon
-  on the chosen night. `sky on` redisplays the sky for that location and date.
+  set the scene date to the object's next rise, so it's right at the horizon
+  at the start of the chosen night (rather than mid-transit, or below the
+  horizon). `sky on` redisplays the sky for that location and date.
   **Show on dome** refuses to run at all (no commands sent) if the object's
   apex doesn't clear the horizon there - Digistar would otherwise zoom to a
   point below the horizon, which its documentation notes produces a "black
