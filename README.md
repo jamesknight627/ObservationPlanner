@@ -313,7 +313,7 @@ since Digistar string arguments are double-quoted.
 
 ### On-dome date/time and location labels
 
-Two custom `textClass` objects (`js/digistar.js`'s `buildLabelCommands()`),
+Two custom `textClass` objects (`js/digistar.js`'s `ensureLabelObjectsExist()`),
 parented to `eye` rather than `scene` so they act as a fixed on-screen display
 rather than sitting at a point in the sky:
 
@@ -328,7 +328,9 @@ rather than sitting at a point in the sky:
 Both are created once per Digistar session (a module-level flag in
 `js/digistar.js` tracks this, not anything persisted) using Digistar's
 `<name> is <class>` object-creation syntax, confirmed working on real
-hardware. Re-running that creation command isn't attempted on later clicks.
+hardware. Re-running that creation command isn't attempted on later clicks
+within the same page load; see [Known limitations](#known-limitations) for
+what happens on a page reload.
 
 ## Known limitations
 
@@ -366,9 +368,10 @@ hardware. Re-running that creation command isn't attempted on later clicks.
 - Inside a Digistar control panel, the "View on Wikipedia" link opens in a new
   window, which will likely be the Host computer's regular browser.
 - The "labels created once per Digistar session" tracking in
-  `buildLabelCommands()` is a page-load-scoped JS variable, not anything
-  Digistar-side. Reloading the planner page (without also clearing the
-  `skyTonightDateTime`/`skyTonightLocation` objects on the dome first) will
-  try to re-create them from scratch; this hasn't been tested against
-  whatever Digistar does when `<name> is <class>` targets a name that's
-  already in use.
+  `ensureLabelObjectsExist()` is a page-load-scoped JS variable, not anything
+  Digistar-side, so reloading the planner page makes it try to re-create
+  `skyTonightDateTime`/`skyTonightLocation` even though Digistar's own object
+  state outlives the page. Confirmed on real hardware that Digistar errors on
+  `<name> is <class>` for a name already in use, so those specific setup
+  commands are sent with errors swallowed rather than surfaced, precisely so
+  this can't block showing the actual object on the dome.

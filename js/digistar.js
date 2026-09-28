@@ -109,6 +109,17 @@ function buildSyncCommands(date, lat, lon) {
 // sets it up ready to display, with no separate "on" needed once it's added as
 // a child (unlike the reserved system objects in buildShowCommands(), which
 // are hidden until turned on explicitly).
+//
+// Digistar's own object state outlives our page's lifecycle, but the
+// "labelObjectsCreated" flag below doesn't - it resets on every page reload.
+// Confirmed on real hardware that re-running "<name> is <class>" against a
+// name that already exists is an error, so a reload would otherwise abort the
+// whole "Show on dome" sequence (sendCommands stops at the first error)
+// before it ever reached the actual object. The one-time setup commands are
+// sent individually with errors swallowed instead, so a leftover object from
+// before a reload can't block showing the real object on the dome; anything
+// that actually needs to work every time (refreshing the location text)
+// still goes through the normal, error-surfacing path.
 // ---------------------------------------------------------------------------
 const DATETIME_TEXT_NAME = "skyTonightDateTime";
 const LOCATION_TEXT_NAME = "skyTonightLocation";
@@ -122,38 +133,53 @@ function toDigistarString(text) {
     return text.replace(/"/g, "");
 }
 
-function buildLabelCommands(locationLabel) {
-    if (!DOME_SETTINGS.syncSky) return [];
+// Runs a command but swallows any error instead of throwing, logging it for
+// debugging. Only used for the one-time label setup - see the comment above.
+async function executeCommandBestEffort(command) {
+    try {
+        await executeCommand(command);
+    } catch (err) {
+        console.warn(`Digistar setup command failed (continuing): ${command}`, err);
+    }
+}
 
-    const commands = [];
-    if (!labelObjectsCreated) {
-        commands.push(
-            `${DATETIME_TEXT_NAME} is textClass`,
-            `${DATETIME_TEXT_NAME} origin "center"`,
-            `${DATETIME_TEXT_NAME} alignment "center"`,
-            `${DATETIME_TEXT_NAME} text "Date: {0%b %d, %Y}|Time: {0%T}"`,
-            `${DATETIME_TEXT_NAME} parameter size 1`,
-            `${DATETIME_TEXT_NAME} parameter 0 scene date`,
-            `${DATETIME_TEXT_NAME} color white`,
-            `${DATETIME_TEXT_NAME} intensity 100`,
-            `${DATETIME_TEXT_NAME} position spherical 0 5 1 m`,
-            `eye add ${DATETIME_TEXT_NAME}`,
-            `${LOCATION_TEXT_NAME} is textClass`,
-            `${LOCATION_TEXT_NAME} origin "center"`,
-            `${LOCATION_TEXT_NAME} alignment "center"`,
-            `${LOCATION_TEXT_NAME} color white`,
-            `${LOCATION_TEXT_NAME} intensity 100`,
-            `${LOCATION_TEXT_NAME} position spherical 0 -5 1 m`,
-            `eye add ${LOCATION_TEXT_NAME}`,
-        );
-        labelObjectsCreated = true;
+async function ensureLabelObjectsExist() {
+    if (labelObjectsCreated) return;
+    const setupCommands = [
+        `${DATETIME_TEXT_NAME} is textClass`,
+        `${DATETIME_TEXT_NAME} origin "center"`,
+        `${DATETIME_TEXT_NAME} alignment "center"`,
+        `${DATETIME_TEXT_NAME} text "Date: {0%b %d, %Y}|Time: {0%T}"`,
+        `${DATETIME_TEXT_NAME} parameter size 1`,
+        `${DATETIME_TEXT_NAME} parameter 0 scene date`,
+        `${DATETIME_TEXT_NAME} color white`,
+        `${DATETIME_TEXT_NAME} intensity 100`,
+        `${DATETIME_TEXT_NAME} position spherical 0 5 1 m`,
+        `eye add ${DATETIME_TEXT_NAME}`,
+        `${LOCATION_TEXT_NAME} is textClass`,
+        `${LOCATION_TEXT_NAME} origin "center"`,
+        `${LOCATION_TEXT_NAME} alignment "center"`,
+        `${LOCATION_TEXT_NAME} color white`,
+        `${LOCATION_TEXT_NAME} intensity 100`,
+        `${LOCATION_TEXT_NAME} position spherical 0 -5 1 m`,
+        `eye add ${LOCATION_TEXT_NAME}`,
+    ];
+    for (const command of setupCommands) {
+        await executeCommandBestEffort(command);
     }
-    // Refreshed on every call (not just at creation) so a later click with a
-    // different planner location keeps the on-dome text current.
+    labelObjectsCreated = true;
+}
+
+// Creates the label objects if this is the first call since page load, then
+// refreshes the location text - the latter goes through the normal
+// error-surfacing path, since a failure here means something is actually
+// wrong (not just "the object already existed").
+async function syncLabelObjects(locationLabel) {
+    if (!DOME_SETTINGS.syncSky) return;
+    await ensureLabelObjectsExist();
     if (locationLabel) {
-        commands.push(`${LOCATION_TEXT_NAME} text "${toDigistarString(locationLabel)}"`);
+        await executeCommand(`${LOCATION_TEXT_NAME} text "${toDigistarString(locationLabel)}"`);
     }
-    return commands;
 }
 
 // Adds the object's image to the scene, then turns on its marker and label.
@@ -245,16 +271,14 @@ function requireDigistarName(target) {
  * is above the horizon for the synced location/date.
  * @param {{name: string, catalog: string, catalogId: string|number, date?: Date, lat?: number, lon?: number, locationLabel?: string, apexBelowHorizon?: boolean}} target
  */
-export function sendToDome(target) {
+export async function sendToDome(target) {
     const digistarName = requireDigistarName(target);
     if (target.apexBelowHorizon) {
         throw new Error(`${target.name} doesn't rise above the horizon from this location and date`);
     }
-    return sendCommands([
-        ...buildSyncCommands(target.date, target.lat, target.lon),
-        ...buildLabelCommands(target.locationLabel),
-        ...buildShowCommands(digistarName),
-    ]);
+    await sendCommands(buildSyncCommands(target.date, target.lat, target.lon));
+    await syncLabelObjects(target.locationLabel);
+    await sendCommands(buildShowCommands(digistarName));
 }
 
 // Turns off the object, its marker, and its label.
