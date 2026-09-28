@@ -74,14 +74,17 @@ const EXPLICIT_ON_PLANET_KEYS = new Set(["uranus", "neptune", "pluto", "sun"]);
 
 // Classifies a planner object against Digistar's built-in objects, returning
 // null if it isn't one, or { kind, name } if it is. `name` is the exact
-// Digistar object name; `kind` says what showing/hiding it requires:
-//   - "system-object": a Messier/NGC object - scene add + on + marker/label
-//     (buildShowCommands()/buildHideCommands()).
-//   - "planet-explicit": a planet needing "<name> on" and, on hide, "<name>
-//     off" - no marker/label commands, since it's unconfirmed whether planets
-//     even have paired Marker/Label objects the way Messier/NGC ones do.
-//   - "planet-auto": already visible via "sky on" alone - nothing to send to
-//     show it, and nothing tracked to turn off later.
+// Digistar object name; `kind` says what showing/hiding it requires. All
+// three kinds have paired Marker/Label objects (confirmed on real hardware
+// for planets too, e.g. "SaturnMarker"/"SaturnLabel"), turned on/off the same
+// way as Messier/NGC ones - the difference is only in the base image itself:
+//   - "system-object": a Messier/NGC object - needs "scene add" once, then
+//     "<name> on" (buildShowCommands()/buildHideCommands()).
+//   - "planet-explicit": a planet needing "<name> on" but no "scene add"
+//     first - it's assumed to already be in the scene, just not displayed.
+//   - "planet-auto": the base image is already visible via "sky on" alone,
+//     so there's nothing to send for *it* - but its marker/label still need
+//     their own "on", same as the other two kinds.
 function classifyTarget({ catalog, catalogId, name }) {
     if (catalog === "M" && isSupportedMessierId(catalogId)) return { kind: "system-object", name: `M${catalogId}` };
     if (catalog === "NGC" && SUPPORTED_NGC_NUMBERS.has(catalogId)) return { kind: "system-object", name: `NGC${catalogId}` };
@@ -210,13 +213,9 @@ async function syncLabelObjects(locationLabel) {
     }
 }
 
-// Adds the object's image to the scene, then turns on its marker and label.
-// Only the image needs "scene add" first - confirmed on real hardware that its
-// marker turns on directly without it. The label is assumed to behave the same
-// way (both are lightweight objects paired with the image, per the User's
-// Guide's System Objects reference) but that specific case hasn't been tested
-// yet; if it turns out to need its own "scene add <name>Label" first, add it
-// here.
+// Turns on an object's marker and label - confirmed on real hardware for both
+// Messier/NGC objects and planets, with no "scene add" needed first for
+// either's marker/label specifically.
 //
 // "daylight off" is set on each after it's turned on, not before - confirmed
 // on real hardware that sending it before "on" doesn't stick (daylight stayed
@@ -226,10 +225,8 @@ async function syncLabelObjects(locationLabel) {
 // defaults whenever it runs (not just when the object was already on), it
 // would clobber a "daylight off" sent beforehand back to the preference
 // default. Sending it after "on" avoids that.
-function buildShowCommands(digistarName) {
+function buildMarkerLabelCommands(digistarName) {
     return [
-        `scene add ${digistarName}`,
-        `${digistarName} on`,
         `${digistarName}Marker on`,
         `${digistarName}Marker daylight off`,
         `${digistarName}Label on`,
@@ -237,8 +234,42 @@ function buildShowCommands(digistarName) {
     ];
 }
 
+// Shows a Messier/NGC object's image, then its marker/label. Only the image
+// needs "scene add" first - confirmed on real hardware that its marker turns
+// on directly without it; the label is assumed to behave the same way (both
+// are lightweight objects paired with the image, per the User's Guide's
+// System Objects reference) but that specific case hasn't been tested yet;
+// if it turns out to need its own "scene add <name>Label" first, add it here.
+function buildShowCommands(digistarName) {
+    return [`scene add ${digistarName}`, `${digistarName} on`, ...buildMarkerLabelCommands(digistarName)];
+}
+
 function buildHideCommands(digistarName) {
     return [`${digistarName} off`, `${digistarName}Marker off`, `${digistarName}Label off`];
+}
+
+// Shows a planet: no "scene add" (it's assumed to already be in the scene),
+// and "<name> on" only if it isn't already visible via "sky on" alone (see
+// classifyTarget()'s "planet-auto" vs "planet-explicit"); its marker/label
+// either way, same as a Messier/NGC object's.
+function buildPlanetShowCommands(digistarName, needsExplicitOn) {
+    return [
+        ...(needsExplicitOn ? [`${digistarName} on`] : []),
+        ...buildMarkerLabelCommands(digistarName),
+    ];
+}
+
+// Hides a planet's marker/label always (they're only ever turned on by us),
+// but its base image only if we were the ones who turned it on
+// ("planet-explicit") - a "planet-auto" planet's image is part of the normal
+// sky via "sky on", not something we turned on ourselves, so it's left alone
+// rather than hiding something the operator didn't ask us to hide.
+function buildPlanetHideCommands(digistarName, hideBase) {
+    return [
+        ...(hideBase ? [`${digistarName} off`] : []),
+        `${digistarName}Marker off`,
+        `${digistarName}Label off`,
+    ];
 }
 
 // ---------------------------------------------------------------------------
@@ -306,15 +337,15 @@ function requireDigistarTarget(target) {
 // entry only ever got "<name> on" sent for it, so hiding it is just "<name>
 // off"; a "system-object" entry gets the full base/marker/label treatment.
 function buildHideCommandsFor(kind, name) {
-    return kind === "planet-explicit" ? [`${name} off`] : buildHideCommands(name);
+    if (kind === "system-object") return buildHideCommands(name);
+    return buildPlanetHideCommands(name, kind === "planet-explicit");
 }
 
 // Every distinct object successfully shown on the dome this page session
 // (name -> its kind, from classifyTarget()), so Reset dome view can clear all
 // of them away except whichever one it was clicked for - browsing through
 // several objects without resetting in between would otherwise leave every
-// one of them lit up at once. "planet-auto" entries (already visible via "sky
-// on" alone) are never added here - there's nothing to turn off for them.
+// one of them lit up at once.
 const shownDigistarNames = new Map();
 
 /**
@@ -344,8 +375,10 @@ export async function addObjectToDome(target) {
     if (target.apexBelowHorizon) {
         throw new Error(`${target.name} doesn't rise above the horizon from this location and date`);
     }
-    if (kind === "planet-auto") return; // already visible via "sky on" - nothing to send
-    await sendCommands(kind === "planet-explicit" ? [`${name} on`] : buildShowCommands(name));
+    const commands = kind === "system-object"
+        ? buildShowCommands(name)
+        : buildPlanetShowCommands(name, kind === "planet-explicit");
+    await sendCommands(commands);
     shownDigistarNames.set(name, kind);
 }
 

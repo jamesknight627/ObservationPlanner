@@ -306,14 +306,13 @@ M13Label daylight off
 session *except* the one whose detail panel it was clicked from - so
 browsing through several objects without resetting in between doesn't leave
 every one of them lit up at once, but clicking reset while looking at an
-object doesn't hide the very thing you're looking at. For a Messier/NGC
-object it sends `<name> off`, `<name>Marker off`, and `<name>Label off`; for
-a planet shown via an explicit `<name> on` (see below) it just sends `<name>
-off`, since it's unconfirmed whether planets have paired Marker/Label
-objects the way Messier/NGC ones do (`js/digistar.js`'s `shownDigistarNames`
-tracks what's been shown, and how to hide it, per object). It doesn't touch
-the date/time/location labels - they're a persistent on-dome display, not
-tied to any one object.
+object doesn't hide the very thing you're looking at. It always sends
+`<name>Marker off` and `<name>Label off`; whether it also sends `<name> off`
+for the base image depends on whether the app was the one that turned it on
+(see the planets table below for when that's *not* the case) -
+`js/digistar.js`'s `shownDigistarNames` tracks what's been shown, and how to
+hide it, per object. It doesn't touch the date/time/location labels - they're
+a persistent on-dome display, not tied to any one object.
 
 Only objects Digistar has as built-in named system objects can be shown this
 way: Messier M1–M110, a fixed set of about 200 NGC objects (see
@@ -323,19 +322,24 @@ of the deep-sky catalog — isn't in Digistar's built-in library, so the
 button shows a clear "isn't in Digistar's object library" message instead of
 attempting anything.
 
-Planets need less than Messier/NGC objects, and not all of them need the
-same thing - confirmed on real hardware:
+Planets need less than Messier/NGC objects for their base image, but the
+same as Messier/NGC objects for their marker/label - confirmed on real
+hardware, e.g. `SaturnMarker`/`SaturnLabel` work exactly like `M13Marker`/
+`M13Label`:
 
-| Planets | What's needed |
-| --- | --- |
-| Mercury, Venus, Mars, Jupiter, Saturn | Nothing - `sky on` (already part of the location/date sync) shows them automatically. |
-| Uranus, Neptune | `<name> on` |
-| Pluto, Sun | Untested - `js/digistar.js` assumes they need `<name> on` like Uranus/Neptune, since they're not in the confirmed auto-visible set. Move `AUTO_VISIBLE_PLANET_KEYS`/`EXPLICIT_ON_PLANET_KEYS` if that turns out wrong. |
+| Planets | Base image | Marker/label |
+| --- | --- | --- |
+| Mercury, Venus, Mars, Jupiter, Saturn | Nothing - `sky on` (already part of the location/date sync) shows them automatically. | `<name>Marker on`/`<name>Label on` (+ `daylight off` each), same as any other object. |
+| Uranus, Neptune | `<name> on` | Same as above. |
+| Pluto, Sun | Untested - `js/digistar.js` assumes they need `<name> on` like Uranus/Neptune, since they're not in the confirmed auto-visible set. Move `AUTO_VISIBLE_PLANET_KEYS`/`EXPLICIT_ON_PLANET_KEYS` if that turns out wrong. | Assumed to work the same way; untested. |
 
-None of these send `scene add` (unlike Messier/NGC objects) or any
-marker/label commands - planets are assumed to already be in the scene, just
-not always displayed, and it's unconfirmed whether they have paired
-Marker/Label objects at all.
+None of these send `scene add` (unlike Messier/NGC objects) - planets are
+assumed to already be in the scene, just not always displayed. **Reset dome
+view** always turns a planet's marker/label back off, but only turns its
+base image off for Uranus/Neptune/Pluto/Sun - Mercury/Venus/Mars/Jupiter/
+Saturn's image is never something the app turned on itself (it's part of
+the normal sky via `sky on`), so reset leaves it alone rather than hiding
+something the operator didn't ask it to hide.
 
 Behavior can be adjusted in the `DOME_SETTINGS` block at the top of
 `js/digistar.js`:
