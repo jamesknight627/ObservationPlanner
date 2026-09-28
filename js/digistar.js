@@ -190,18 +190,22 @@ async function syncLabelObjects(locationLabel) {
 // yet; if it turns out to need its own "scene add <name>Label" first, add it
 // here.
 //
-// "daylight off" is set on each before it's turned on, so the marker/label
-// stay visible even when the sun is up - by default a daylight-enabled text
-// object darkens for the night sky, per the textClass reference's daylight
-// attribute.
+// "daylight off" is set on each after it's turned on, not before - confirmed
+// on real hardware that sending it before "on" doesn't stick (daylight stayed
+// on). The likely cause, per the System Objects reference: "if a system
+// object is already on when an on command is executed, Digistar restores its
+// attributes to the preference settings" - if "on" applies preference
+// defaults whenever it runs (not just when the object was already on), it
+// would clobber a "daylight off" sent beforehand back to the preference
+// default. Sending it after "on" avoids that.
 function buildShowCommands(digistarName) {
     return [
         `scene add ${digistarName}`,
         `${digistarName} on`,
-        `${digistarName}Marker daylight off`,
         `${digistarName}Marker on`,
-        `${digistarName}Label daylight off`,
+        `${digistarName}Marker daylight off`,
         `${digistarName}Label on`,
+        `${digistarName}Label daylight off`,
     ];
 }
 
