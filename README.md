@@ -295,9 +295,15 @@ M13Label daylight off
   its example (`# JD=2455208.2048`) is just a comment on what that calendar
   string converts to internally, not an alternate input format.
 
-**Reset dome view** sends `M13 off`, `M13Marker off`, and `M13Label off` for
-whichever object was last shown. It doesn't touch the date/time/location
-labels - they're a persistent on-dome display, not tied to any one object.
+**Reset dome view** turns off every object shown on the dome this page
+session *except* the one whose detail panel it was clicked from - so
+browsing through several objects without resetting in between doesn't leave
+every one of them lit up at once, but clicking reset while looking at an
+object doesn't hide the very thing you're looking at. It sends `<name> off`,
+`<name>Marker off`, and `<name>Label off` for each other object (`js/digistar.js`'s
+`shownDigistarNames` tracks what's been shown). It doesn't touch the
+date/time/location labels - they're a persistent on-dome display, not tied to
+any one object.
 
 Only objects Digistar has as built-in named system objects can be shown this
 way: Messier M1–M110, and a fixed set of about 200 NGC objects (see

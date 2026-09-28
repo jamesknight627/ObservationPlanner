@@ -274,6 +274,12 @@ function requireDigistarName(target) {
     return digistarName;
 }
 
+// Every distinct object successfully shown on the dome this page session, so
+// Reset dome view can clear all of them away except whichever one it was
+// clicked for - browsing through several objects without resetting in
+// between would otherwise leave every one of them lit up at once.
+const shownDigistarNames = new Set();
+
 /**
  * Shows a target on the dome: syncs location/date, refreshes the on-dome
  * date/time and location labels, then adds the object with its marker and
@@ -290,12 +296,20 @@ export async function sendToDome(target) {
     await sendCommands(buildSyncCommands(target.date, target.lat, target.lon));
     await syncLabelObjects(target.locationLabel);
     await sendCommands(buildShowCommands(digistarName));
+    shownDigistarNames.add(digistarName);
 }
 
-// Turns off the object, its marker, and its label.
-export function resetDome(target) {
-    const digistarName = requireDigistarName(target);
-    return sendCommands(buildHideCommands(digistarName));
+// Turns off every object shown on the dome this session except the current
+// target of interest, which is left as-is. Works even if the current target
+// itself isn't a Digistar-supported object (nothing to exclude then, so
+// everything else still gets cleared) or was never shown (nothing to do).
+export async function resetDome(target) {
+    const currentDigistarName = digistarNameFor(target);
+    const staleNames = [...shownDigistarNames].filter((name) => name !== currentDigistarName);
+    for (const name of staleNames) {
+        await sendCommands(buildHideCommands(name));
+        shownDigistarNames.delete(name);
+    }
 }
 
 // ---------------------------------------------------------------------------
