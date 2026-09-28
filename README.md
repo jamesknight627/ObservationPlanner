@@ -242,19 +242,19 @@ sky on
 skyTonightDateTime is textClass
 skyTonightDateTime origin "center"
 skyTonightDateTime alignment "center"
-skyTonightDateTime text "Date: {0%b %d, %Y}|Time: {0%T}"
+skyTonightDateTime text "{0%b %d, %Y %T}"
 skyTonightDateTime parameter size 1
 skyTonightDateTime parameter 0 scene date
 skyTonightDateTime color white
 skyTonightDateTime intensity 100
-skyTonightDateTime position spherical 0 5 1 m
+skyTonightDateTime position spherical 0 8 1 m
 eye add skyTonightDateTime
 skyTonightLocation is textClass
 skyTonightLocation origin "center"
 skyTonightLocation alignment "center"
 skyTonightLocation color white
 skyTonightLocation intensity 100
-skyTonightLocation position spherical 0 -5 1 m
+skyTonightLocation position spherical 0 4 1 m
 eye add skyTonightLocation
 skyTonightLocation text "New York, NY"
 scene add M13
@@ -320,8 +320,8 @@ rather than sitting at a point in the sky:
 - `skyTonightDateTime` — its `text` binds to `parameter 0`, which is tied to
   the `scene` object's own `date` attribute (`parameter 0 scene date`), so it
   keeps itself current as the scene date changes rather than needing to be
-  re-sent. The `{0%b %d, %Y}`/`{0%T}` format specifiers are `strftime`-style,
-  per the `textClass` reference's formatted-text support.
+  re-sent. The `{0%b %d, %Y %T}` format specifiers are `strftime`-style, per
+  the `textClass` reference's formatted-text support.
 - `skyTonightLocation` — a plain static label, refreshed with the planner's
   location string (e.g. "New York, NY") on every **Show on dome** click.
 
