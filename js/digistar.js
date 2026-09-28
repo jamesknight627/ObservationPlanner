@@ -189,11 +189,18 @@ async function syncLabelObjects(locationLabel) {
 // Guide's System Objects reference) but that specific case hasn't been tested
 // yet; if it turns out to need its own "scene add <name>Label" first, add it
 // here.
+//
+// "daylight off" is set on each before it's turned on, so the marker/label
+// stay visible even when the sun is up - by default a daylight-enabled text
+// object darkens for the night sky, per the textClass reference's daylight
+// attribute.
 function buildShowCommands(digistarName) {
     return [
         `scene add ${digistarName}`,
         `${digistarName} on`,
+        `${digistarName}Marker daylight off`,
         `${digistarName}Marker on`,
+        `${digistarName}Label daylight off`,
         `${digistarName}Label on`,
     ];
 }

@@ -259,7 +259,9 @@ eye add skyTonightLocation
 skyTonightLocation text "New York, NY"
 scene add M13
 M13 on
+M13Marker daylight off
 M13Marker on
+M13Label daylight off
 M13Label on
 ```
 
@@ -278,7 +280,9 @@ M13Label on
   `M13Marker on` and `M13Label on` turn on its paired marker and label system
   objects (confirmed on real hardware that the marker needs no separate
   `scene add`; the label is assumed to behave the same way since it's the same
-  kind of paired object, but that specific case hasn't been tested).
+  kind of paired object, but that specific case hasn't been tested). Each gets
+  `daylight off` first so it stays visible even when the sun is up in the
+  scene - by default a daylight-enabled text object darkens for the night sky.
 - `scene date` is sent without a trailing time-scale keyword. The User's Guide
   documents one (e.g. `ut`), but some Digistar 7 installs reject it as an
   unexpected token; UT is the default time scale either way, so the date/time
