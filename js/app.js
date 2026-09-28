@@ -14,12 +14,17 @@ import {
 } from './storage.js';
 import { geocodeLocation } from './geocode.js';
 import { TYPE_LABELS, SOLAR_SYSTEM_TYPE_LABELS } from './typeLabels.js';
+import { isDomeAvailable, syncDomeSky, addObjectToDome, resetAllDome } from './digistar.js';
 
 const resultsEl = document.querySelector('#results');
 const detailPanelEl = document.querySelector('#detail-panel');
 const savedListEl = document.querySelector('#saved-list');
 const savedListToolbarEl = document.querySelector('#saved-list-toolbar');
 const favoritesSortEl = document.querySelector('#favorites-sort');
+const favoritesDomeControlEl = document.querySelector('#favorites-dome-control');
+const favoritesDomeAddBtn = document.querySelector('#favorites-dome-add');
+const favoritesDomeResetBtn = document.querySelector('#favorites-dome-reset');
+const favoritesDomeStatusEl = document.querySelector('#favorites-dome-status');
 const searchFormEl = document.querySelector('#search-form');
 const searchInputEl = document.querySelector('#search-input');
 const dateInputEl = document.querySelector('#date-input');
@@ -342,6 +347,46 @@ function renderFavorites() {
     );
 }
 
+// Syncs the dome to the planner's current date/location once, then adds every
+// favorite that's in Digistar's object library and above the horizon that
+// day. There's no single correct dome "date" for a batch of objects that
+// each rise at a different time, so unlike the per-object Show on dome
+// button, this doesn't sync to each favorite's own rise time.
+async function addAllFavoritesToDome() {
+    const favorites = getFavorites()
+        .map(f => objectFromFavorite(f, state.date))
+        .filter(Boolean);
+
+    await syncDomeSky({
+        date: state.date,
+        lat: state.location?.latitude,
+        lon: state.location?.longitude,
+        locationLabel: state.location?.label,
+    });
+
+    let added = 0;
+    const skipped = [];
+    for (const object of favorites) {
+        const { transitTime } = object.getVisibilityWindow(state.location, state.date);
+        const apexBelowHorizon = transitTime ? false : !object.isVisibleAt(state.location, state.date);
+        try {
+            await addObjectToDome({
+                name: object.name,
+                catalog: object.catalog,
+                catalogId: object.catalogId,
+                apexBelowHorizon,
+            });
+            added += 1;
+        } catch (err) {
+            skipped.push(object.name);
+        }
+    }
+
+    if (favorites.length === 0) return 'No saved objects to add.';
+    if (skipped.length === 0) return `Added ${added} favorite${added === 1 ? '' : 's'} to the dome.`;
+    return `Added ${added} favorite${added === 1 ? '' : 's'}; skipped ${skipped.length} (${skipped.join(', ')}).`;
+}
+
 tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
         const isSaved = btn.dataset.tab === 'saved';
@@ -421,6 +466,36 @@ favoritesSortEl?.addEventListener('change', () => {
     state.favoritesSortBy = favoritesSortEl.value;
     renderFavorites();
 });
+
+// Hidden until isDomeAvailable() confirms Digistar's web interface is answering, so
+// this is a no-op outside the dome (see js/digistar.js), same as the per-object
+// dome control in js/render.js.
+if (favoritesDomeControlEl) {
+    isDomeAvailable().then((available) => { favoritesDomeControlEl.hidden = !available; });
+}
+
+async function runFavoritesDomeAction(action, busyText, getSuccessText) {
+    if (!favoritesDomeAddBtn || !favoritesDomeResetBtn || !favoritesDomeStatusEl) return;
+    favoritesDomeAddBtn.disabled = true;
+    favoritesDomeResetBtn.disabled = true;
+    favoritesDomeStatusEl.classList.remove('is-error');
+    favoritesDomeStatusEl.textContent = busyText;
+    try {
+        const result = await action();
+        favoritesDomeStatusEl.textContent = getSuccessText(result);
+    } catch (err) {
+        favoritesDomeStatusEl.classList.add('is-error');
+        favoritesDomeStatusEl.textContent = err.message;
+    } finally {
+        favoritesDomeAddBtn.disabled = false;
+        favoritesDomeResetBtn.disabled = false;
+    }
+}
+
+favoritesDomeAddBtn?.addEventListener('click', () =>
+    runFavoritesDomeAction(addAllFavoritesToDome, 'Adding…', (message) => message));
+favoritesDomeResetBtn?.addEventListener('click', () =>
+    runFavoritesDomeAction(resetAllDome, 'Resetting…', () => 'Dome view reset'));
 
 clearFiltersBtn?.addEventListener('click', () => {
     state.filters = {

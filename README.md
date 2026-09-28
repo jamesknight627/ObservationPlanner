@@ -36,8 +36,9 @@ marker and label, with one click.
   planner's location and the object's next rise time, then adds the object with
   its marker and label — for objects in Digistar's built-in library (Messier
   and a set of NGC objects; see [How the dome control
-  works](#how-the-dome-control-works)). Anywhere else, these buttons simply
-  don't appear.
+  works](#how-the-dome-control-works)). The Saved Objects tab has its own
+  **Add all to dome**/**Reset dome view** pair that does the same for every
+  favorite in one go. Anywhere else, these buttons simply don't appear.
 
 ## Running it
 
@@ -324,6 +325,25 @@ Object names sent to Digistar always come from the `SUPPORTED_NGC_NUMBERS`
 allow-list or the M1–M110 range check — never from arbitrary user input. The
 location label's text is stripped of any `"` characters before being sent,
 since Digistar string arguments are double-quoted.
+
+### Adding every favorite to the dome
+
+The Saved Objects tab's **Add all to dome** button (`addAllFavoritesToDome()`
+in `js/app.js`) syncs the dome's location/date *once*, to the planner's
+currently selected date — there's no single correct dome date for a batch of
+objects that each rise at a different time, unlike the per-object button,
+which syncs to that one object's own next rise. It then adds every favorite
+that's both in Digistar's object library and above the horizon that day,
+skipping the rest, and reports a one-line summary such as "Added 3
+favorites; skipped 2 (NGC1234, Never Rises)."
+
+This is built on two pieces `js/digistar.js` exports for exactly this split:
+`syncDomeSky()` (the location/date/label sync alone) and `addObjectToDome()`
+(adding one object, given an already-known `apexBelowHorizon`). The
+per-object `sendToDome()` is just those two called back to back. Its
+**Reset dome view** counterpart (`resetAllDome()`) turns off *every* object
+shown this session with no exclusion, unlike the per-object detail panel's
+reset — there's no single "current" object in a batch context to spare.
 
 ### On-dome date/time and location labels
 

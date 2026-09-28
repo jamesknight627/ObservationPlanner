@@ -281,22 +281,44 @@ function requireDigistarName(target) {
 const shownDigistarNames = new Set();
 
 /**
- * Shows a target on the dome: syncs location/date, refreshes the on-dome
- * date/time and location labels, then adds the object with its marker and
- * label. Only objects in Digistar's built-in library (Messier M1-M110, a
- * fixed set of NGC objects) can be shown this way, and only when their apex
- * is above the horizon for the synced location/date.
- * @param {{name: string, catalog: string, catalogId: string|number, date?: Date, lat?: number, lon?: number, locationLabel?: string, apexBelowHorizon?: boolean}} target
+ * Syncs the dome's location/date and the on-dome date/time/location labels to
+ * the planner, without showing any object. Split out from addObjectToDome()
+ * so a batch operation (e.g. adding every favorite) can sync once instead of
+ * once per object - there's no single correct "date" for a batch of objects
+ * that each rise at a different time, so callers doing that should sync to
+ * something meaningful once (e.g. the planner's selected date) up front.
+ * @param {{date?: Date, lat?: number, lon?: number, locationLabel?: string}} sync
  */
-export async function sendToDome(target) {
+export async function syncDomeSky({ date, lat, lon, locationLabel } = {}) {
+    await sendCommands(buildSyncCommands(date, lat, lon));
+    await syncLabelObjects(locationLabel);
+}
+
+/**
+ * Adds a target to the dome: its image, marker, and label. Only objects in
+ * Digistar's built-in library (Messier M1-M110, a fixed set of NGC objects)
+ * can be shown this way, and only when their apex is above the horizon
+ * (`apexBelowHorizon: false`) - callers are expected to have already computed
+ * that for the date they care about.
+ * @param {{name: string, catalog: string, catalogId: string|number, apexBelowHorizon?: boolean}} target
+ */
+export async function addObjectToDome(target) {
     const digistarName = requireDigistarName(target);
     if (target.apexBelowHorizon) {
         throw new Error(`${target.name} doesn't rise above the horizon from this location and date`);
     }
-    await sendCommands(buildSyncCommands(target.date, target.lat, target.lon));
-    await syncLabelObjects(target.locationLabel);
     await sendCommands(buildShowCommands(digistarName));
     shownDigistarNames.add(digistarName);
+}
+
+/**
+ * Syncs the dome to a target's own location/date, then shows it - the single-
+ * object convenience path used by the per-object "Show on dome" button.
+ * @param {{name: string, catalog: string, catalogId: string|number, date?: Date, lat?: number, lon?: number, locationLabel?: string, apexBelowHorizon?: boolean}} target
+ */
+export async function sendToDome(target) {
+    await syncDomeSky(target);
+    await addObjectToDome(target);
 }
 
 // Turns off every object shown on the dome this session except the current
@@ -307,6 +329,16 @@ export async function resetDome(target) {
     const currentDigistarName = digistarNameFor(target);
     const staleNames = [...shownDigistarNames].filter((name) => name !== currentDigistarName);
     for (const name of staleNames) {
+        await sendCommands(buildHideCommands(name));
+        shownDigistarNames.delete(name);
+    }
+}
+
+// Turns off every object shown on the dome this session, with no exclusion -
+// used by the favorites tab's batch "Reset dome view" button, which has no
+// single "current" object the way an individual detail panel does.
+export async function resetAllDome() {
+    for (const name of [...shownDigistarNames]) {
         await sendCommands(buildHideCommands(name));
         shownDigistarNames.delete(name);
     }
