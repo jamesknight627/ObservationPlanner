@@ -306,19 +306,36 @@ M13Label daylight off
 session *except* the one whose detail panel it was clicked from - so
 browsing through several objects without resetting in between doesn't leave
 every one of them lit up at once, but clicking reset while looking at an
-object doesn't hide the very thing you're looking at. It sends `<name> off`,
-`<name>Marker off`, and `<name>Label off` for each other object (`js/digistar.js`'s
-`shownDigistarNames` tracks what's been shown). It doesn't touch the
-date/time/location labels - they're a persistent on-dome display, not tied to
-any one object.
+object doesn't hide the very thing you're looking at. For a Messier/NGC
+object it sends `<name> off`, `<name>Marker off`, and `<name>Label off`; for
+a planet shown via an explicit `<name> on` (see below) it just sends `<name>
+off`, since it's unconfirmed whether planets have paired Marker/Label
+objects the way Messier/NGC ones do (`js/digistar.js`'s `shownDigistarNames`
+tracks what's been shown, and how to hide it, per object). It doesn't touch
+the date/time/location labels - they're a persistent on-dome display, not
+tied to any one object.
 
 Only objects Digistar has as built-in named system objects can be shown this
-way: Messier M1–M110, and a fixed set of about 200 NGC objects (see
-`SUPPORTED_NGC_NUMBERS` in `js/digistar.js`, from the Digistar 7 User's Guide's
-system object list). Everything else — the rest of the deep-sky catalog, and
-all solar-system bodies — isn't in Digistar's built-in library, so the button
-shows a clear "isn't in Digistar's object library" message instead of
+way: Messier M1–M110, a fixed set of about 200 NGC objects (see
+`SUPPORTED_NGC_NUMBERS` in `js/digistar.js`, from the Digistar 7 User's
+Guide's system object list), and the Sun/planets. Everything else — the rest
+of the deep-sky catalog — isn't in Digistar's built-in library, so the
+button shows a clear "isn't in Digistar's object library" message instead of
 attempting anything.
+
+Planets need less than Messier/NGC objects, and not all of them need the
+same thing - confirmed on real hardware:
+
+| Planets | What's needed |
+| --- | --- |
+| Mercury, Venus, Mars, Jupiter, Saturn | Nothing - `sky on` (already part of the location/date sync) shows them automatically. |
+| Uranus, Neptune | `<name> on` |
+| Pluto, Sun | Untested - `js/digistar.js` assumes they need `<name> on` like Uranus/Neptune, since they're not in the confirmed auto-visible set. Move `AUTO_VISIBLE_PLANET_KEYS`/`EXPLICIT_ON_PLANET_KEYS` if that turns out wrong. |
+
+None of these send `scene add` (unlike Messier/NGC objects) or any
+marker/label commands - planets are assumed to already be in the scene, just
+not always displayed, and it's unconfirmed whether they have paired
+Marker/Label objects at all.
 
 Behavior can be adjusted in the `DOME_SETTINGS` block at the top of
 `js/digistar.js`:

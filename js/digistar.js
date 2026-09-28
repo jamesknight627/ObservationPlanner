@@ -29,12 +29,12 @@ const PROBE_PATH = "/digistar/objects/eye/intensity";
 const TIMEOUT_MS = 4000;
 
 // ---------------------------------------------------------------------------
-// Which objects Digistar has as built-in named system objects (Digistar 7
-// User's Guide's system object list), each with three paired objects: the
-// image itself ("M13"), its marker ("M13Marker"), and its label ("M13Label").
-// Anything outside this set - the rest of the deep-sky catalog, and all
-// solar-system bodies (which use an internal catalog code with no Digistar
-// counterpart) - isn't in Digistar's built-in library.
+// Which objects Digistar has as built-in named system objects: Messier/NGC
+// objects (Digistar 7 User's Guide's system object list), each with three
+// paired objects (the image itself, e.g. "M13", its marker "M13Marker", and
+// its label "M13Label"); and the Sun/planets (see classifyTarget() below).
+// Anything outside those - the rest of the deep-sky catalog - isn't in
+// Digistar's built-in library.
 // ---------------------------------------------------------------------------
 
 // Digistar's Messier objects run M1 through M110.
@@ -60,11 +60,39 @@ const SUPPORTED_NGC_NUMBERS = new Set([
     7742, 7789, 7793,
 ]);
 
-// Maps a planner object to its Digistar system object name ("M13", "NGC40"), or
-// null if it isn't one of Digistar's built-in objects.
-function digistarNameFor({ catalog, catalogId }) {
-    if (catalog === "M" && isSupportedMessierId(catalogId)) return `M${catalogId}`;
-    if (catalog === "NGC" && SUPPORTED_NGC_NUMBERS.has(catalogId)) return `NGC${catalogId}`;
+// Solar-system bodies (js/SolarSystemBody.js's catalog code "SOL", catalogId the
+// lowercase body key from js/ephemeris.js's SOLAR_SYSTEM_BODIES). Confirmed on
+// real hardware: Mercury, Venus, Mars, Jupiter, and Saturn (plus the Magellanic
+// Clouds) are turned on automatically by "sky on" - already sent by
+// buildSyncCommands() - so there's nothing left to send for them. Neptune and
+// Uranus needed an explicit "<name> on" instead. Pluto and the Sun weren't
+// tested; they're assumed to need the explicit "on" too, on the basis that only
+// the five confirmed-auto planets are in the auto-visible set - if either turns
+// out to behave like the auto-visible five, move its key up to that set.
+const AUTO_VISIBLE_PLANET_KEYS = new Set(["mercury", "venus", "mars", "jupiter", "saturn"]);
+const EXPLICIT_ON_PLANET_KEYS = new Set(["uranus", "neptune", "pluto", "sun"]);
+
+// Classifies a planner object against Digistar's built-in objects, returning
+// null if it isn't one, or { kind, name } if it is. `name` is the exact
+// Digistar object name; `kind` says what showing/hiding it requires:
+//   - "system-object": a Messier/NGC object - scene add + on + marker/label
+//     (buildShowCommands()/buildHideCommands()).
+//   - "planet-explicit": a planet needing "<name> on" and, on hide, "<name>
+//     off" - no marker/label commands, since it's unconfirmed whether planets
+//     even have paired Marker/Label objects the way Messier/NGC ones do.
+//   - "planet-auto": already visible via "sky on" alone - nothing to send to
+//     show it, and nothing tracked to turn off later.
+function classifyTarget({ catalog, catalogId, name }) {
+    if (catalog === "M" && isSupportedMessierId(catalogId)) return { kind: "system-object", name: `M${catalogId}` };
+    if (catalog === "NGC" && SUPPORTED_NGC_NUMBERS.has(catalogId)) return { kind: "system-object", name: `NGC${catalogId}` };
+    // "SOL" matches SolarSystemBody.js's SOLAR_SYSTEM_CATALOG constant, duplicated
+    // here as a literal rather than imported so this module stays free of
+    // astronomy-module dependencies, same as the "M"/"NGC" catalog checks above.
+    if (catalog === "SOL" && typeof catalogId === "string") {
+        const key = catalogId.toLowerCase();
+        if (AUTO_VISIBLE_PLANET_KEYS.has(key)) return { kind: "planet-auto", name };
+        if (EXPLICIT_ON_PLANET_KEYS.has(key)) return { kind: "planet-explicit", name };
+    }
     return null;
 }
 
@@ -268,17 +296,26 @@ export function isDomeAvailable() {
     return availability;
 }
 
-function requireDigistarName(target) {
-    const digistarName = digistarNameFor(target);
-    if (!digistarName) throw new Error(`${target.name} isn't in Digistar's object library`);
-    return digistarName;
+function requireDigistarTarget(target) {
+    const classified = classifyTarget(target);
+    if (!classified) throw new Error(`${target.name} isn't in Digistar's object library`);
+    return classified;
 }
 
-// Every distinct object successfully shown on the dome this page session, so
-// Reset dome view can clear all of them away except whichever one it was
-// clicked for - browsing through several objects without resetting in
-// between would otherwise leave every one of them lit up at once.
-const shownDigistarNames = new Set();
+// Builds the hide commands for a shown entry, per its kind - a "planet-explicit"
+// entry only ever got "<name> on" sent for it, so hiding it is just "<name>
+// off"; a "system-object" entry gets the full base/marker/label treatment.
+function buildHideCommandsFor(kind, name) {
+    return kind === "planet-explicit" ? [`${name} off`] : buildHideCommands(name);
+}
+
+// Every distinct object successfully shown on the dome this page session
+// (name -> its kind, from classifyTarget()), so Reset dome view can clear all
+// of them away except whichever one it was clicked for - browsing through
+// several objects without resetting in between would otherwise leave every
+// one of them lit up at once. "planet-auto" entries (already visible via "sky
+// on" alone) are never added here - there's nothing to turn off for them.
+const shownDigistarNames = new Map();
 
 /**
  * Syncs the dome's location/date and the on-dome date/time/location labels to
@@ -295,20 +332,21 @@ export async function syncDomeSky({ date, lat, lon, locationLabel } = {}) {
 }
 
 /**
- * Adds a target to the dome: its image, marker, and label. Only objects in
- * Digistar's built-in library (Messier M1-M110, a fixed set of NGC objects)
- * can be shown this way, and only when their apex is above the horizon
- * (`apexBelowHorizon: false`) - callers are expected to have already computed
- * that for the date they care about.
+ * Adds a target to the dome. Only objects in Digistar's built-in library
+ * (Messier M1-M110, a fixed set of NGC objects, and the Sun/planets - see
+ * classifyTarget()) can be shown this way, and only when their apex is above
+ * the horizon (`apexBelowHorizon: false`) - callers are expected to have
+ * already computed that for the date they care about.
  * @param {{name: string, catalog: string, catalogId: string|number, apexBelowHorizon?: boolean}} target
  */
 export async function addObjectToDome(target) {
-    const digistarName = requireDigistarName(target);
+    const { kind, name } = requireDigistarTarget(target);
     if (target.apexBelowHorizon) {
         throw new Error(`${target.name} doesn't rise above the horizon from this location and date`);
     }
-    await sendCommands(buildShowCommands(digistarName));
-    shownDigistarNames.add(digistarName);
+    if (kind === "planet-auto") return; // already visible via "sky on" - nothing to send
+    await sendCommands(kind === "planet-explicit" ? [`${name} on`] : buildShowCommands(name));
+    shownDigistarNames.set(name, kind);
 }
 
 /**
@@ -326,10 +364,10 @@ export async function sendToDome(target) {
 // itself isn't a Digistar-supported object (nothing to exclude then, so
 // everything else still gets cleared) or was never shown (nothing to do).
 export async function resetDome(target) {
-    const currentDigistarName = digistarNameFor(target);
-    const staleNames = [...shownDigistarNames].filter((name) => name !== currentDigistarName);
-    for (const name of staleNames) {
-        await sendCommands(buildHideCommands(name));
+    const currentName = classifyTarget(target)?.name;
+    for (const [name, kind] of [...shownDigistarNames]) {
+        if (name === currentName) continue;
+        await sendCommands(buildHideCommandsFor(kind, name));
         shownDigistarNames.delete(name);
     }
 }
@@ -338,8 +376,8 @@ export async function resetDome(target) {
 // used by the favorites tab's batch "Reset dome view" button, which has no
 // single "current" object the way an individual detail panel does.
 export async function resetAllDome() {
-    for (const name of [...shownDigistarNames]) {
-        await sendCommands(buildHideCommands(name));
+    for (const [name, kind] of [...shownDigistarNames]) {
+        await sendCommands(buildHideCommandsFor(kind, name));
         shownDigistarNames.delete(name);
     }
 }
