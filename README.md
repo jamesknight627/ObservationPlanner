@@ -28,6 +28,12 @@ marker and label, with one click.
   Wikipedia summary and photo when one is available.
 - **Saved objects** — a favorites tab backed by `localStorage`, so a returning
   visitor doesn't have to re-search objects they cared about.
+- **Plan** — a third tab that turns your saved objects into a viewing order
+  for the selected date: favorites that are up that night, sorted by rise
+  time and showing rise/apex/set for each, so the list itself reads as a
+  session plan. Favorites that aren't up at all that date are named
+  separately rather than silently dropped. Click a row to open its detail
+  panel, same as a result card.
 - **Persisted session** — last-used location and date are remembered between
   visits.
 - **Planetarium dome control (Digistar 7)** — when the site is served by

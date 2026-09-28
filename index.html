@@ -28,6 +28,7 @@
         <nav class="tabs" aria-label="View selector">
             <button class="tab is-active" data-tab="results">Results</button>
             <button class="tab" data-tab="saved">Saved Objects</button>
+            <button class="tab" data-tab="plan">Plan</button>
         </nav>
 
         <div id="filters-bar" class="filters" aria-label="Filter results">
@@ -91,6 +92,10 @@
 
             <section id="saved-list" class="saved-list" hidden aria-label="Saved objects">
                 <!-- favorited objects rendered here by js/render.js -->
+            </section>
+
+            <section id="plan-list" class="plan-list" hidden aria-label="Tonight's observing plan">
+                <!-- favorites visible on the selected date, in viewing order, rendered here by js/render.js -->
             </section>
 
             <nav id="pagination" class="pagination" aria-label="Result pages" hidden>

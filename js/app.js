@@ -1,7 +1,7 @@
 import { fetchObjects, searchObjects } from './api.js';
 import { CelestialObject } from './CelestialObject.js';
 import { fetchSolarSystemBodies, objectFromFavorite } from './objectFactory.js';
-import { renderObjectList, renderDetailPanel, setLoadingState, setErrorState } from './render.js';
+import { renderObjectList, renderPlanList, renderDetailPanel, setLoadingState, setErrorState } from './render.js';
 import {
     addFavorite,
     removeFavorite,
@@ -19,6 +19,7 @@ import { isDomeAvailable, syncDomeSky, addObjectToDome, resetAllDome } from './d
 const resultsEl = document.querySelector('#results');
 const detailPanelEl = document.querySelector('#detail-panel');
 const savedListEl = document.querySelector('#saved-list');
+const planListEl = document.querySelector('#plan-list');
 const savedListToolbarEl = document.querySelector('#saved-list-toolbar');
 const favoritesSortEl = document.querySelector('#favorites-sort');
 const favoritesDomeControlEl = document.querySelector('#favorites-dome-control');
@@ -307,6 +308,7 @@ function handleToggleFavorite(object, cardEl) {
     }
     cardEl.classList.toggle('is-favorite', !favorited);
     renderFavorites();
+    renderPlan();
 }
 
 // Maps the sort-by <select> value to the matching getVisibilityWindow() field.
@@ -343,6 +345,46 @@ function renderFavorites() {
         savedListEl,
         sorted,
         { onSelect: handleSelectObject, onToggleFavorite: handleToggleFavorite },
+        'No saved objects yet. Click the star on any object to save it.'
+    );
+}
+
+// Tonight's viewing order: favorites that are up on the selected date, sorted
+// by rise time, so the list itself reads as a plan for the session rather
+// than just a sortable grid (that's what the Saved Objects tab is for).
+function renderPlan() {
+    const favorites = getFavorites()
+        .map(f => objectFromFavorite(f, state.date))
+        .filter(Boolean);
+
+    const visibleEntries = [];
+    const notVisible = [];
+    for (const object of favorites) {
+        const { riseTime, transitTime, setTime } = object.getVisibilityWindow(state.location, state.date);
+        // No transitTime means either circumpolar (already up, nothing to wait for) or
+        // never rises at all that date - isVisibleAt() disambiguates the two.
+        const isUp = transitTime ? true : object.isVisibleAt(state.location, state.date);
+        if (isUp) {
+            visibleEntries.push({ object, riseTime, transitTime, setTime });
+        } else {
+            notVisible.push(object);
+        }
+    }
+
+    // Rise time ascending; circumpolar objects (no specific rise) sort first, since
+    // they're already up and there's nothing to wait for.
+    visibleEntries.sort((a, b) => {
+        if (!a.riseTime && !b.riseTime) return 0;
+        if (!a.riseTime) return -1;
+        if (!b.riseTime) return 1;
+        return a.riseTime.getTime() - b.riseTime.getTime();
+    });
+
+    renderPlanList(
+        planListEl,
+        visibleEntries,
+        notVisible,
+        { onSelect: handleSelectObject },
         'No saved objects yet. Click the star on any object to save it.'
     );
 }
@@ -389,14 +431,18 @@ async function addAllFavoritesToDome() {
 
 tabButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-        const isSaved = btn.dataset.tab === 'saved';
+        const tab = btn.dataset.tab; // 'results' | 'saved' | 'plan'
         tabButtons.forEach((b) => b.classList.toggle('is-active', b === btn));
-        resultsEl.hidden = isSaved;
-        savedListEl.hidden = !isSaved;
-        if (filtersBarEl) filtersBarEl.hidden = isSaved;
-        if (savedListToolbarEl) savedListToolbarEl.hidden = !isSaved;
-        if (isSaved) {
+        resultsEl.hidden = tab !== 'results';
+        savedListEl.hidden = tab !== 'saved';
+        if (planListEl) planListEl.hidden = tab !== 'plan';
+        if (filtersBarEl) filtersBarEl.hidden = tab !== 'results';
+        if (savedListToolbarEl) savedListToolbarEl.hidden = tab !== 'saved';
+        if (tab === 'saved') {
             renderFavorites();
+            if (paginationEl) paginationEl.hidden = true;
+        } else if (tab === 'plan') {
+            renderPlan();
             if (paginationEl) paginationEl.hidden = true;
         } else {
             renderPagination();
@@ -565,7 +611,9 @@ dateInputEl?.addEventListener('change', () => {
     // rebuilt too (the dataset itself is cached, so this doesn't re-fetch it).
     if (hasClientFilters() || isSolarSystemScope()) refreshResults();
     renderFavorites();
+    renderPlan();
 });
 
 loadResults();
 renderFavorites();
+renderPlan();

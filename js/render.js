@@ -58,6 +58,59 @@ export function renderObjectList(container, objects, handlers, emptyMessage = 'N
     container.appendChild(fragment);
 }
 
+// One row of a viewing-order plan: rise time first (the "when to start"), then
+// the object and the rest of its window, so the list reads like a schedule.
+function renderPlanRow({ object, riseTime, transitTime, setTime }, { onSelect } = {}) {
+    const row = document.createElement('li');
+    row.className = 'plan-row';
+    row.tabIndex = 0;
+    row.innerHTML = `
+        <span class="plan-row__time">${formatTime(riseTime)}</span>
+        <span class="plan-row__body">
+            <span class="plan-row__name">${object.cardTitle}</span>
+            <span class="plan-row__window">apex ${formatTime(transitTime)} · sets ${formatTime(setTime)}</span>
+        </span>
+    `;
+    row.addEventListener('click', () => onSelect?.(object));
+    row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onSelect?.(object);
+        }
+    });
+    return row;
+}
+
+// Tonight's viewing order: favorites that are up on the selected date, sorted
+// by rise time, each with its rise/apex/set times so the list itself reads as
+// a plan rather than requiring a click into each one. Favorites that aren't up
+// at all that date are named separately rather than silently dropped.
+export function renderPlanList(container, visibleEntries, notVisibleObjects, handlers, emptyMessage) {
+    container.innerHTML = '';
+    if (visibleEntries.length === 0 && notVisibleObjects.length === 0) {
+        container.innerHTML = `<p class="empty-state">${emptyMessage}</p>`;
+        return;
+    }
+
+    const list = document.createElement('ol');
+    list.className = 'plan-row-list';
+    if (visibleEntries.length === 0) {
+        list.innerHTML = '<li class="empty-state">None of your saved objects are up on this date.</li>';
+    } else {
+        for (const entry of visibleEntries) {
+            list.appendChild(renderPlanRow(entry, handlers));
+        }
+    }
+    container.appendChild(list);
+
+    if (notVisibleObjects.length > 0) {
+        const notVisible = document.createElement('p');
+        notVisible.className = 'plan-list__not-visible';
+        notVisible.textContent = `Not up on this date: ${notVisibleObjects.map((o) => o.cardTitle).join(', ')}`;
+        container.appendChild(notVisible);
+    }
+}
+
 // <dt>/<dd> rows for any extra dataset facts the object provides (solar-system bodies
 // have diameter, gravity, etc.; deep-sky objects have none).
 export function renderPhysicalFactRows(object) {
