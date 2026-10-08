@@ -310,7 +310,24 @@ button:focus-visible {
     --scheduler-reset-width: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 1.1rem;
+    gap: 0.35rem;
+}
+
+/* A row of sunset/sunrise/civil-twilight time flags, reserved at a fixed height (rather
+   than floating up from their lines in the body below) so two close ones can stack into
+   tiers without ever growing into whatever is above the scheduler. Only rendered when at
+   least one of those crossings falls within the timeline. */
+.scheduler__sun-labels {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--scheduler-gutter);
+}
+
+.scheduler__sun-labels-track {
+    position: relative;
+    flex: 1 1 auto;
+    height: 2.1rem;
+    margin-right: calc(var(--scheduler-reset-width) + var(--scheduler-gutter));
 }
 
 .scheduler__ruler {
@@ -362,6 +379,7 @@ button:focus-visible {
 
 .scheduler__body {
     position: relative;
+    margin-top: 1rem;
 }
 
 /* Lines sit behind the row list (see z-index on .scheduler__rows), spanning its full
@@ -382,6 +400,57 @@ button:focus-visible {
     bottom: 0;
     width: 1px;
     background: var(--border);
+}
+
+/* Sunset/sunrise and civil-twilight markers - same full-height overlay approach as the
+   hour gridlines, layered on top of them (later in the DOM) but still behind the rows. */
+.scheduler__sun-marks {
+    position: absolute;
+    inset: 0;
+    left: calc(var(--scheduler-label-width) + var(--scheduler-gutter));
+    right: calc(var(--scheduler-reset-width) + var(--scheduler-gutter));
+    pointer-events: none;
+}
+
+.scheduler__sun-mark {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1px dashed;
+    transform: translateX(-50%);
+}
+
+.scheduler__sun-mark--horizon {
+    border-color: rgba(255, 138, 92, 0.8);
+}
+
+.scheduler__sun-mark--civil {
+    border-color: rgba(122, 162, 255, 0.75);
+}
+
+/* Anchored to the bottom of the fixed-height .scheduler__sun-labels-track (see
+   renderSunLabelsRow in js/scheduler.js), with tier1 stacked above tier0, so neither can
+   ever grow past that track's own reserved space into content further up the page. */
+.scheduler__sun-mark-label {
+    position: absolute;
+    bottom: 0;
+    transform: translateX(-50%);
+    font-size: 0.65rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.scheduler__sun-mark-label--tier1 {
+    bottom: 1.05rem;
+}
+
+.scheduler__sun-mark-label--horizon {
+    color: rgba(255, 138, 92, 0.9);
+}
+
+.scheduler__sun-mark-label--civil {
+    color: rgba(122, 162, 255, 0.9);
 }
 
 .scheduler__rows {

@@ -1,5 +1,6 @@
 import { fetchObjects, searchObjects } from './api.js';
 import { CelestialObject } from './CelestialObject.js';
+import { SolarSystemBody } from './SolarSystemBody.js';
 import { fetchSolarSystemBodies, objectFromFavorite } from './objectFactory.js';
 import { renderObjectList, renderDetailPanel, setLoadingState, setErrorState } from './render.js';
 import { renderScheduler } from './scheduler.js';
@@ -384,6 +385,35 @@ function sampleAltitude(object, location, start, end, count) {
     return samples;
 }
 
+// Standard altitude thresholds for sunset/sunrise (accounting for atmospheric refraction
+// and the Sun's own apparent radius) and the end/start of civil twilight.
+const SUNSET_ALTITUDE_DEG = -0.833;
+const CIVIL_TWILIGHT_ALTITUDE_DEG = -6;
+const SUN_SCAN_STEP_MS = 5 * 60 * 1000;
+
+// Finds when the Sun first crosses the sunset/sunrise and civil-twilight altitudes within
+// the timeline, scanning it chronologically once so each field is that crossing's first
+// (and, within one night, only) occurrence. A field stays null if the timeline doesn't
+// contain that crossing - e.g. a short timeline, or a latitude/date where the Sun never
+// reaches that altitude at all.
+function findSunMarks(location, timelineStart, timelineEnd) {
+    const sun = new SolarSystemBody({}, 'sun');
+    const marks = { sunset: null, duskCivil: null, dawnCivil: null, sunrise: null };
+    const startMs = timelineStart.getTime();
+    const endMs = timelineEnd.getTime();
+    let prevAlt = sun.toAltAz(location, timelineStart)?.altitude ?? 0;
+    for (let t = startMs + SUN_SCAN_STEP_MS; t <= endMs; t += SUN_SCAN_STEP_MS) {
+        const time = new Date(t);
+        const alt = sun.toAltAz(location, time)?.altitude ?? 0;
+        if (marks.sunset == null && prevAlt >= SUNSET_ALTITUDE_DEG && alt < SUNSET_ALTITUDE_DEG) marks.sunset = time;
+        if (marks.duskCivil == null && prevAlt >= CIVIL_TWILIGHT_ALTITUDE_DEG && alt < CIVIL_TWILIGHT_ALTITUDE_DEG) marks.duskCivil = time;
+        if (marks.dawnCivil == null && prevAlt < CIVIL_TWILIGHT_ALTITUDE_DEG && alt >= CIVIL_TWILIGHT_ALTITUDE_DEG) marks.dawnCivil = time;
+        if (marks.sunrise == null && prevAlt < SUNSET_ALTITUDE_DEG && alt >= SUNSET_ALTITUDE_DEG) marks.sunrise = time;
+        prevAlt = alt;
+    }
+    return marks;
+}
+
 // Tonight's observing schedule: favorites that are up on the selected date, laid out
 // on a shared timeline as draggable rise→set bars (see js/scheduler.js). Any start/end
 // the user has dragged away from the natural rise/set is persisted per date+object via
@@ -441,9 +471,11 @@ function renderPlan() {
     // sort first, since they're already up and there's nothing to wait for.
     visibleEntries.sort((a, b) => a.originalStart.getTime() - b.originalStart.getTime());
 
+    const sunMarks = findSunMarks(state.location, timelineStart, timelineEnd);
+
     renderScheduler(
         planListEl,
-        { timelineStart, timelineEnd, entries: visibleEntries, notVisibleObjects: notVisible },
+        { timelineStart, timelineEnd, entries: visibleEntries, notVisibleObjects: notVisible, sunMarks },
         {
             onSelect: handleSelectObject,
             onTimesChange: (entry, start, end) => {

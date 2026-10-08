@@ -36,9 +36,12 @@ marker and label, with one click.
   stays visible behind the bar as a grayed "ghost," and a reset button
   appears on any row you've adjusted. Each row's track is also plotted with
   that object's altitude over the course of the timeline, so you can see at
-  a glance how high it gets and line the bar up with its peak. Changes are
-  remembered per date, so they're still there if you switch tabs or reload.
-  A circumpolar favorite
+  a glance how high it gets and line the bar up with its peak. Sunset,
+  sunrise, and the start/end of civil twilight are marked as vertical lines
+  running through every row, with time-labeled flags above the timeline, so
+  it's easy to see which part of an object's window falls in full darkness.
+  Changes are remembered per date, so they're still there if you switch tabs
+  or reload. A circumpolar favorite
   (never sets that night) gets a bar spanning the whole timeline instead of
   a rise/set-derived one. Favorites that aren't up at all that date are
   named separately rather than silently dropped. Click a row's name to open
