@@ -12,6 +12,11 @@ marker and label, with one click.
 
 ## Features
 
+- **How To page** (`howto.html`) — a short, six-step walkthrough of planning a
+  night of observations with this app (set location/date, find objects,
+  favorite them, check the Plan tab, fine-tune the schedule, optionally
+  preview on a dome), linked from the header. Deliberately brief; this
+  README is where the detail lives.
 - **Observation planner** — browse the Messier catalog, the full ~227k-object
   deep-sky database, or the Solar System (the Sun, planets, and Pluto), filtered by date/location, type, magnitude, "visible now," peak
   altitude, and time-at-apex window, paginated 20 at a time.
@@ -180,6 +185,7 @@ changed Digistar's web server port from 80 (in
 ```
 index.html              Planner page (search, filters, results grid, detail panel)
 object.html              Full object detail page (photo, description, observing guide)
+howto.html               Short step-by-step guide to planning a night with this app
 check.html               Setup check for Digistar installs (web interface, JS serving, internet)
 style.css                All styling
 js/
@@ -190,6 +196,8 @@ js/
   objectFactory.js        Picks the right class per dataset (lookups, saved favorites)
   app.js                  Planner page controller: state, event wiring, pagination
   object.js               Object detail page controller
+  howto.js                 How To page controller (just wires up the text-size buttons)
+  fontSize.js              Site-wide text size controls, shared across every page
   render.js               DOM rendering for cards, lists, and the detail panel
   scheduler.js             Plan tab's draggable timeline (rendering + resize interactions)
   digistar.js             Digistar dome control: builds and sends commands, dome buttons
