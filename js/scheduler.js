@@ -112,10 +112,20 @@ function renderRuler(timelineStart, timelineEnd) {
         const tick = document.createElement('span');
         tick.className = 'scheduler__tick';
         tick.style.left = `${pct(t, startMs, endMs)}%`;
-        if (i % labelStride === 0) {
+
+        const isLabeled = i % labelStride === 0;
+        if (isLabeled) {
             tick.classList.add('scheduler__tick--labeled');
-            tick.textContent = formatClockTime(new Date(t));
+            const label = document.createElement('span');
+            label.className = 'scheduler__tick-label';
+            label.textContent = formatClockTime(new Date(t));
+            tick.appendChild(label);
         }
+
+        const mark = document.createElement('span');
+        mark.className = 'scheduler__tick-mark';
+        tick.appendChild(mark);
+
         track.appendChild(tick);
     });
 

@@ -310,7 +310,7 @@ button:focus-visible {
     --scheduler-reset-width: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 1.1rem;
 }
 
 .scheduler__ruler {
@@ -328,28 +328,36 @@ button:focus-visible {
 .scheduler__ruler-track {
     position: relative;
     flex: 1 1 auto;
-    height: 1.1rem;
+    height: 1.6rem;
     margin-right: calc(var(--scheduler-reset-width) + var(--scheduler-gutter));
 }
 
-/* Unlabeled hour tick: a short stub mark, same spacing as the gridline behind the rows
-   below it, just without a time label (see MAX_LABELED_TICKS in scheduler.js). */
+/* Every hour gets a mark, bottom-anchored so they all sit flush with the gridlines
+   starting just below; a labeled one (see MAX_LABELED_TICKS in scheduler.js) also gets
+   a time above it and a taller mark, so the labeled ticks read as the "major" ones. */
 .scheduler__tick {
     position: absolute;
     bottom: 0;
-    width: 1px;
-    height: 0.3rem;
-    background: var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     transform: translateX(-50%);
 }
 
-.scheduler__tick--labeled {
-    bottom: auto;
-    top: 0;
-    width: auto;
-    height: auto;
-    background: none;
+.scheduler__tick-label {
+    margin-bottom: 0.2rem;
     white-space: nowrap;
+}
+
+.scheduler__tick-mark {
+    width: 1px;
+    height: 0.3rem;
+    background: var(--border);
+}
+
+.scheduler__tick--labeled .scheduler__tick-mark {
+    height: 0.6rem;
+    background: var(--text-muted);
 }
 
 .scheduler__body {
