@@ -7,6 +7,16 @@
     --accent: #ffd166;
     --border: #2a2f4a;
     --radius: 10px;
+    /* One color per line on the Plan scheduler (sunset/sunrise/civil-twilight, plus the
+       per-row horizon reference), each paired with its own pattern so every line is
+       distinguishable by color AND shape, not color alone. Shared between .scheduler's
+       own lines and .scheduler__legend's key, which is a sibling rather than a
+       descendant of it, so these live at :root rather than scoped to .scheduler. */
+    --sun-sunset: #ff8a5c;
+    --sun-sunrise: #ffb703;
+    --sun-civil-dusk: #5c8dff;
+    --sun-civil-dawn: #4fd1c5;
+    --sun-horizon: var(--text-muted);
 }
 
 * {
@@ -308,6 +318,7 @@ button:focus-visible {
     --scheduler-label-width: 9rem;
     --scheduler-gutter: 0.75rem;
     --scheduler-reset-width: 1.5rem;
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -402,8 +413,12 @@ button:focus-visible {
     background: var(--border);
 }
 
-/* Sunset/sunrise and civil-twilight markers - same full-height overlay approach as the
-   hour gridlines, layered on top of them (later in the DOM) but still behind the rows. */
+/* Sunset/sunrise/civil-twilight markers, spanning the *entire* .scheduler (its nearest
+   positioned ancestor - see "position: relative" above), not just the row list, so each
+   line visibly runs from its flag in .scheduler__sun-labels down through the ruler and
+   every row. Each row also gets its own copies of these spans appended straight into its
+   track (see renderRow() in js/scheduler.js), since this overlay alone would otherwise
+   only show through the gaps between rows - a track's own background covers it there. */
 .scheduler__sun-marks {
     position: absolute;
     inset: 0;
@@ -416,17 +431,32 @@ button:focus-visible {
     position: absolute;
     top: 0;
     bottom: 0;
-    width: 0;
-    border-left: 1px dashed;
+    width: 2px;
     transform: translateX(-50%);
+    pointer-events: none;
 }
 
-.scheduler__sun-mark--horizon {
-    border-color: rgba(255, 138, 92, 0.8);
+/* Each line gets its own color AND its own repeating pattern (solid/dashed/dotted/
+   dash-dot), so no two are distinguishable by color alone - see the matching
+   .scheduler__legend-swatch--* rules below, which reuse the same patterns as a key. */
+.scheduler__sun-mark--sunset {
+    background: var(--sun-sunset);
 }
 
-.scheduler__sun-mark--civil {
-    border-color: rgba(122, 162, 255, 0.75);
+.scheduler__sun-mark--sunrise {
+    background-image: repeating-linear-gradient(to bottom, var(--sun-sunrise) 0 6px, transparent 6px 10px);
+}
+
+.scheduler__sun-mark--civil-dusk {
+    background-image: repeating-linear-gradient(to bottom, var(--sun-civil-dusk) 0 2px, transparent 2px 5px);
+}
+
+.scheduler__sun-mark--civil-dawn {
+    background-image: repeating-linear-gradient(
+        to bottom,
+        var(--sun-civil-dawn) 0 6px, transparent 6px 9px,
+        var(--sun-civil-dawn) 9px 11px, transparent 11px 14px
+    );
 }
 
 /* Anchored to the bottom of the fixed-height .scheduler__sun-labels-track (see
@@ -445,13 +475,10 @@ button:focus-visible {
     bottom: 1.05rem;
 }
 
-.scheduler__sun-mark-label--horizon {
-    color: rgba(255, 138, 92, 0.9);
-}
-
-.scheduler__sun-mark-label--civil {
-    color: rgba(122, 162, 255, 0.9);
-}
+.scheduler__sun-mark-label--sunset { color: var(--sun-sunset); }
+.scheduler__sun-mark-label--sunrise { color: var(--sun-sunrise); }
+.scheduler__sun-mark-label--civil-dusk { color: var(--sun-civil-dusk); }
+.scheduler__sun-mark-label--civil-dawn { color: var(--sun-civil-dawn); }
 
 .scheduler__rows {
     position: relative;
@@ -522,6 +549,17 @@ button:focus-visible {
     fill: none;
     stroke: rgba(255, 209, 102, 0.5);
     stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+}
+
+/* The 0° reference line within each row's own altitude graph - part of the same line
+   "language" as the sunset/sunrise/civil-twilight markers (see the legend), so it gets
+   its own distinct fine-dotted pattern and the shared --sun-horizon color. */
+.scheduler__altitude-horizon {
+    stroke: var(--sun-horizon);
+    stroke-width: 1;
+    stroke-dasharray: 1 2;
+    opacity: 0.7;
     vector-effect: non-scaling-stroke;
 }
 
@@ -602,6 +640,56 @@ button:focus-visible {
 .scheduler__reset:focus-visible {
     color: var(--accent);
     outline: none;
+}
+
+/* Key for every line used on the scheduler - see renderLegend() in js/scheduler.js.
+   Each swatch reuses the exact same background pattern as the real line (just oriented
+   horizontally instead of vertically), so the key can never drift out of sync with how
+   the lines actually render. */
+.scheduler__legend {
+    margin-top: 1rem;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.scheduler__legend td {
+    padding: 0.2rem 0.5rem 0.2rem 0;
+    vertical-align: middle;
+}
+
+.scheduler__legend-swatch-cell {
+    width: 1.75rem;
+}
+
+.scheduler__legend-swatch {
+    display: inline-block;
+    width: 1.75rem;
+    height: 0.4rem;
+}
+
+.scheduler__legend-swatch--sunset {
+    background: var(--sun-sunset);
+}
+
+.scheduler__legend-swatch--sunrise {
+    background-image: repeating-linear-gradient(to right, var(--sun-sunrise) 0 6px, transparent 6px 10px);
+}
+
+.scheduler__legend-swatch--civil-dusk {
+    background-image: repeating-linear-gradient(to right, var(--sun-civil-dusk) 0 2px, transparent 2px 5px);
+}
+
+.scheduler__legend-swatch--civil-dawn {
+    background-image: repeating-linear-gradient(
+        to right,
+        var(--sun-civil-dawn) 0 6px, transparent 6px 9px,
+        var(--sun-civil-dawn) 9px 11px, transparent 11px 14px
+    );
+}
+
+.scheduler__legend-swatch--horizon {
+    background-image: repeating-linear-gradient(to right, var(--sun-horizon) 0 1px, transparent 1px 3px);
 }
 
 .detail-panel {

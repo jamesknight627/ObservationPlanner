@@ -38,12 +38,16 @@ marker and label, with one click.
   that object's altitude over the course of the timeline, on a fixed
   horizon-to-zenith (0-90°) scale shared by every row, so how tall a curve
   stands is directly comparable from one object to the next - not just how
-  high each one gets on its own. Sunset,
-  sunrise, and the start/end of civil twilight are marked as vertical lines
-  running through every row, with time-labeled flags above the timeline, so
-  it's easy to see which part of an object's window falls in full darkness.
-  Changes are remembered per date, so they're still there if you switch tabs
-  or reload. A circumpolar favorite
+  high each one gets on its own - each row's graph also keeps a horizon (0°)
+  reference line. Sunset, sunrise, and the start/end of civil twilight are
+  marked as vertical lines running the full height of the timeline, from a
+  time-labeled flag above the ruler down through every row (including
+  through each row's own bar and altitude curve), so it's easy to see which
+  part of an object's window falls in full darkness. All five lines - the
+  four twilight/sun markers plus the horizon reference - have their own
+  distinct color and pattern (solid, dashed, dotted, dash-dot...), with a
+  legend underneath the schedule as a key. Changes are remembered per date,
+  so they're still there if you switch tabs or reload. A circumpolar favorite
   (never sets that night) gets a bar spanning the whole timeline instead of
   a rise/set-derived one. Favorites that aren't up at all that date are
   named separately rather than silently dropped. Click a row's name to open

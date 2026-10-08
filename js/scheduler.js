@@ -54,7 +54,17 @@ function renderAltitudeGraph(samples) {
     line.setAttribute('class', 'scheduler__altitude-line');
     line.setAttribute('points', linePoints);
 
-    svg.append(areaPath, line);
+    // The 0° reference line. It sits essentially at the track's own bottom edge now that
+    // the domain is a fixed 0-90°, but is nudged up by 1 unit (~1% of the track's height)
+    // so its own dotted stroke isn't clipped clean off by the viewBox/track border.
+    const horizon = document.createElementNS(SVG_NS, 'line');
+    horizon.setAttribute('class', 'scheduler__altitude-horizon');
+    horizon.setAttribute('x1', '0');
+    horizon.setAttribute('x2', '100');
+    horizon.setAttribute('y1', '99');
+    horizon.setAttribute('y2', '99');
+
+    svg.append(areaPath, line, horizon);
     return svg;
 }
 
@@ -190,43 +200,92 @@ function renderGridlines(timelineStart, timelineEnd) {
     return gridlines;
 }
 
-// Which sunMarks field goes with which label and line style, and a `tier` so the two
-// members of each close-together pair (sunset/duskCivil at dusk, dawnCivil/sunrise at
-// dawn) land on alternating lines above the timeline instead of overlapping each other.
+// Which sunMarks field goes with which label, line style, and legend entry. `kind` is
+// unique per mark (not shared between e.g. sunset/sunrise) so every line gets its own
+// distinct color/pattern - see the .scheduler__sun-mark--* rules in style.css. `tier`
+// puts the two members of each close-together pair (sunset/duskCivil at dusk,
+// dawnCivil/sunrise at dawn) on alternating lines above the timeline instead of
+// overlapping each other.
 const SUN_MARK_DEFS = [
-    { key: 'sunset', label: 'Sunset', kind: 'horizon', tier: 0 },
-    { key: 'duskCivil', label: 'Civil dusk', kind: 'civil', tier: 1 },
-    { key: 'dawnCivil', label: 'Civil dawn', kind: 'civil', tier: 1 },
-    { key: 'sunrise', label: 'Sunrise', kind: 'horizon', tier: 0 },
+    { key: 'sunset', label: 'Sunset', kind: 'sunset', tier: 0 },
+    { key: 'duskCivil', label: 'Civil dusk', kind: 'civil-dusk', tier: 1 },
+    { key: 'dawnCivil', label: 'Civil dawn', kind: 'civil-dawn', tier: 1 },
+    { key: 'sunrise', label: 'Sunrise', kind: 'sunrise', tier: 0 },
+];
+
+// The legend lists every line used on the scheduler, including the per-row horizon
+// reference line, which isn't one of the sunMarks crossings but shares the same visual
+// language (a distinctly colored/patterned line meaning a specific altitude or moment).
+const LEGEND_ITEMS = [
+    ...SUN_MARK_DEFS.map(({ kind, label }) => ({ kind, label })),
+    { kind: 'horizon', label: 'Horizon (0° altitude)' },
 ];
 
 function hasAnySunMark(sunMarks) {
     return !!sunMarks && SUN_MARK_DEFS.some(({ key }) => sunMarks[key]);
 }
 
-// Vertical marker lines for sunset/sunrise and the start/end of civil twilight, as one
-// overlay behind the row list - same approach as the hour gridlines, just with its own
-// line style. The time labels themselves live in a separate reserved-height row above
-// the ruler (renderSunLabelsRow) rather than floating off these lines, so they can never
-// overlap content further up the page regardless of how many are stacked.
-function renderSunMarkLines(timelineStart, timelineEnd, sunMarks) {
-    const container = document.createElement('div');
-    container.className = 'scheduler__sun-marks';
-    if (!sunMarks) return container;
-
+// One <span> per sunset/sunrise/civil-twilight crossing present in sunMarks, left-
+// positioned (as a percentage, 0-100) to its moment on the timeline. Used both for the
+// full-height overlay (renderSunMarkOverlay) and, appended straight into a row's own
+// track, so each row's line stays visible crossing its altitude graph/ghost/bar rather
+// than being hidden behind their backgrounds (the overlay alone only shows in the gaps
+// between rows, since a track's own background would otherwise cover it).
+function buildSunMarkSpans(timelineStart, timelineEnd, sunMarks) {
+    if (!sunMarks) return [];
     const startMs = timelineStart.getTime();
     const endMs = timelineEnd.getTime();
+    const spans = [];
     for (const { key, kind } of SUN_MARK_DEFS) {
         const time = sunMarks[key];
         if (!time) continue;
-
         const mark = document.createElement('span');
         mark.className = `scheduler__sun-mark scheduler__sun-mark--${kind}`;
         mark.style.left = `${pct(time.getTime(), startMs, endMs)}%`;
-        container.appendChild(mark);
+        spans.push(mark);
     }
+    return spans;
+}
 
+// The sunset/sunrise/civil-twilight lines as one overlay spanning the *entire* scheduler
+// (labels row + ruler + body), not just the row list, so each line visibly runs from its
+// time-labeled flag at the top all the way down through the timeline - see the "inset: 0"
+// on .scheduler__sun-marks and "position: relative" on .scheduler itself.
+function renderSunMarkOverlay(timelineStart, timelineEnd, sunMarks) {
+    const container = document.createElement('div');
+    container.className = 'scheduler__sun-marks';
+    container.append(...buildSunMarkSpans(timelineStart, timelineEnd, sunMarks));
     return container;
+}
+
+// A compact key for every line used on the scheduler - the four sunset/sunrise/civil-
+// twilight crossings plus the per-row horizon reference - so their colors/patterns are
+// explained rather than left for the user to guess. Each swatch reuses the exact same
+// classes as the real line, so it can never drift out of sync with how the lines
+// actually render.
+function renderLegend() {
+    const table = document.createElement('table');
+    table.className = 'scheduler__legend';
+
+    const tbody = document.createElement('tbody');
+    for (const { kind, label } of LEGEND_ITEMS) {
+        const row = document.createElement('tr');
+
+        const swatchCell = document.createElement('td');
+        swatchCell.className = 'scheduler__legend-swatch-cell';
+        const swatch = document.createElement('span');
+        swatch.className = `scheduler__legend-swatch scheduler__legend-swatch--${kind}`;
+        swatchCell.appendChild(swatch);
+
+        const labelCell = document.createElement('td');
+        labelCell.textContent = label;
+
+        row.append(swatchCell, labelCell);
+        tbody.appendChild(row);
+    }
+    table.appendChild(tbody);
+
+    return table;
 }
 
 // A row of small time-labeled flags above the ruler, one per sunset/sunrise/civil-
@@ -262,7 +321,7 @@ function renderSunLabelsRow(timelineStart, timelineEnd, sunMarks) {
     return row;
 }
 
-function renderRow(entry, timelineStart, timelineEnd, handlers) {
+function renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks) {
     const row = document.createElement('li');
     row.className = 'scheduler__row';
 
@@ -331,6 +390,7 @@ function renderRow(entry, timelineStart, timelineEnd, handlers) {
 
     const parts = [];
     if (entry.altitudeSamples) parts.push(renderAltitudeGraph(entry.altitudeSamples));
+    parts.push(...buildSunMarkSpans(timelineStart, timelineEnd, sunMarks));
     parts.push(ghost, bar);
     track.append(...parts);
     row.append(label, track, resetBtn);
@@ -359,10 +419,18 @@ export function renderScheduler(container, { timelineStart, timelineEnd, entries
 
     const scheduler = document.createElement('div');
     scheduler.className = 'scheduler';
-    if (hasAnySunMark(sunMarks)) {
+    const hasSunMarks = hasAnySunMark(sunMarks);
+    if (hasSunMarks) {
         scheduler.appendChild(renderSunLabelsRow(timelineStart, timelineEnd, sunMarks));
     }
     scheduler.appendChild(renderRuler(timelineStart, timelineEnd));
+    // Spans the *whole* scheduler (appended here, not inside the body below), so each
+    // line visibly runs from its flag at the top down through the ruler, the gaps
+    // between rows, and - via the matching spans renderRow() adds to each row's own
+    // track - every row's bar and altitude graph too.
+    if (hasSunMarks) {
+        scheduler.appendChild(renderSunMarkOverlay(timelineStart, timelineEnd, sunMarks));
+    }
 
     if (entries.length === 0) {
         const empty = document.createElement('p');
@@ -373,12 +441,11 @@ export function renderScheduler(container, { timelineStart, timelineEnd, entries
         const body = document.createElement('div');
         body.className = 'scheduler__body';
         body.appendChild(renderGridlines(timelineStart, timelineEnd));
-        body.appendChild(renderSunMarkLines(timelineStart, timelineEnd, sunMarks));
 
         const rows = document.createElement('ol');
         rows.className = 'scheduler__rows';
         for (const entry of entries) {
-            rows.appendChild(renderRow(entry, timelineStart, timelineEnd, handlers));
+            rows.appendChild(renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks));
         }
         body.appendChild(rows);
 
@@ -386,6 +453,10 @@ export function renderScheduler(container, { timelineStart, timelineEnd, entries
     }
 
     container.appendChild(scheduler);
+
+    if (entries.length > 0) {
+        container.appendChild(renderLegend());
+    }
 
     if (notVisibleObjects.length > 0) {
         const notVisible = document.createElement('p');
