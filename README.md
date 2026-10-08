@@ -19,7 +19,11 @@ marker and label, with one click.
   README is where the detail lives.
 - **Observation planner** — browse the Messier catalog, the full ~227k-object
   deep-sky database, or the Solar System (the Sun, planets, and Pluto), filtered by date/location, type, magnitude, "visible now," peak
-  altitude, and time-at-apex window, paginated 20 at a time.
+  altitude, a time-at-apex window, and an "up between" window, paginated 20
+  at a time. "Up between" has an "Altitude above" filter paired with it
+  (only usable once both window times are set) that finds objects above a
+  given altitude at *some point* during that window - not just at their
+  daily peak, which is what "Peaks above" answers on its own.
 - **Object search** — search by catalog ID (`M31`, `NGC224`) or common name
   (`Andromeda`, `Orion Nebula`). With the Solar System catalog selected,
   search by planet name (`Jupiter`).

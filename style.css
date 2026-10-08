@@ -98,6 +98,12 @@ button {
     padding: 0.4rem 0.6rem;
 }
 
+input:disabled,
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 button {
     cursor: pointer;
 }

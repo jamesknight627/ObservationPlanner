@@ -52,6 +52,7 @@ const apexStartFilterEl = document.querySelector('#apex-start-filter');
 const apexEndFilterEl = document.querySelector('#apex-end-filter');
 const windowStartFilterEl = document.querySelector('#window-start-filter');
 const windowEndFilterEl = document.querySelector('#window-end-filter');
+const windowAltitudeFilterEl = document.querySelector('#window-altitude-filter');
 const clearFiltersBtn = document.querySelector('#clear-filters');
 
 const PAGE_SIZE = 20;
@@ -99,6 +100,7 @@ const state = {
         apexEnd: '',
         windowStart: '',
         windowEnd: '',
+        minAltitudeInWindow: null,
     },
     // Cached full match set when client-side filters are active, so Prev/Next paginate
     // in memory instead of re-fetching and re-filtering on every click.
@@ -194,8 +196,38 @@ function isVisibleDuringWindow(riseTime, setTime, date, startStr, endStr) {
     return riseTime <= end && setTime >= start;
 }
 
+// The highest altitude the object reaches at any point during the given window (not
+// necessarily at its daily transit, if the transit itself falls outside the window) -
+// paired with the "Up between" window filter to answer "is this above N° at some point
+// while I'm actually observing," rather than "Peaks above" N°'s "does it ever reach N°
+// at all, any time that day." Returns null if the object isn't up during the window at
+// all (same cases isVisibleDuringWindow excludes: never rises, or circumpolar - the
+// latter has no riseTime/setTime to overlap-check against).
+//
+// An object's altitude over a single day is unimodal (rises monotonically to transit,
+// falls monotonically after), so the window's own maximum is either the transit
+// altitude itself (if the transit falls inside the window) or whichever end of the
+// window-intersected-with-the-rise/set-span is closer to it - evaluating both ends and
+// taking the larger covers that without needing to search in between.
+function getMaxAltitudeInWindow(object, location, date, startStr, endStr) {
+    const { riseTime, setTime, transitTime, maxAltitudeDeg } = object.getVisibilityWindow(location, date);
+    if (!isVisibleDuringWindow(riseTime, setTime, date, startStr, endStr)) return null;
+
+    const { start, end } = buildWindowRange(date, startStr, endStr);
+    const shiftedTransit = transitTime ? shiftIntoWindow(transitTime, start) : null;
+    if (shiftedTransit && shiftedTransit >= start && shiftedTransit <= end) {
+        return maxAltitudeDeg;
+    }
+
+    const rangeStart = new Date(Math.max(start.getTime(), shiftIntoWindow(riseTime, start).getTime()));
+    const rangeEnd = new Date(Math.min(end.getTime(), shiftIntoWindow(setTime, start).getTime()));
+    const altAtStart = object.toAltAz(location, rangeStart)?.altitude ?? -90;
+    const altAtEnd = object.toAltAz(location, rangeEnd)?.altitude ?? -90;
+    return Math.max(altAtStart, altAtEnd);
+}
+
 function matchesClientFilters(object) {
-    const { visibleOnly, minMaxAltitude, apexStart, apexEnd, windowStart, windowEnd } = state.filters;
+    const { visibleOnly, minMaxAltitude, apexStart, apexEnd, windowStart, windowEnd, minAltitudeInWindow } = state.filters;
     if (visibleOnly && !object.isVisibleAt(state.location, state.date)) return false;
     if (minMaxAltitude != null) {
         const maxAltitude = object.getMaxAltitude(state.location, state.date);
@@ -208,6 +240,10 @@ function matchesClientFilters(object) {
     if (windowStart && windowEnd) {
         const { riseTime, setTime } = object.getVisibilityWindow(state.location, state.date);
         if (!isVisibleDuringWindow(riseTime, setTime, state.date, windowStart, windowEnd)) return false;
+        if (minAltitudeInWindow != null) {
+            const maxAltInWindow = getMaxAltitudeInWindow(object, state.location, state.date, windowStart, windowEnd);
+            if (maxAltInWindow == null || maxAltInWindow < minAltitudeInWindow) return false;
+        }
     }
     return true;
 }
@@ -618,13 +654,36 @@ apexEndFilterEl?.addEventListener('change', () => {
     refreshResults();
 });
 
+// "Altitude above" only means anything alongside an "Up between" window (it answers
+// "above N° at some point in that window," not "ever, any time that day" - that's what
+// "Peaks above" is for) - so its input stays disabled, and its own filter value unset,
+// until both window times are filled in.
+function updateWindowAltitudeAvailability() {
+    if (!windowAltitudeFilterEl) return;
+    const windowSet = Boolean(state.filters.windowStart && state.filters.windowEnd);
+    windowAltitudeFilterEl.disabled = !windowSet;
+    if (!windowSet && windowAltitudeFilterEl.value !== '') {
+        windowAltitudeFilterEl.value = '';
+        state.filters.minAltitudeInWindow = null;
+    }
+}
+updateWindowAltitudeAvailability();
+
 windowStartFilterEl?.addEventListener('change', () => {
     state.filters.windowStart = windowStartFilterEl.value;
+    updateWindowAltitudeAvailability();
     refreshResults();
 });
 
 windowEndFilterEl?.addEventListener('change', () => {
     state.filters.windowEnd = windowEndFilterEl.value;
+    updateWindowAltitudeAvailability();
+    refreshResults();
+});
+
+windowAltitudeFilterEl?.addEventListener('change', () => {
+    const value = windowAltitudeFilterEl.value.trim();
+    state.filters.minAltitudeInWindow = value === '' ? null : Number(value);
     refreshResults();
 });
 
@@ -674,6 +733,7 @@ clearFiltersBtn?.addEventListener('click', () => {
         apexEnd: '',
         windowStart: '',
         windowEnd: '',
+        minAltitudeInWindow: null,
     };
     if (datasetFilterEl) datasetFilterEl.value = DEFAULT_CATALOG_SCOPE;
     populateTypeOptions(DEFAULT_CATALOG_SCOPE);
@@ -684,6 +744,8 @@ clearFiltersBtn?.addEventListener('click', () => {
     if (apexEndFilterEl) apexEndFilterEl.value = '';
     if (windowStartFilterEl) windowStartFilterEl.value = '';
     if (windowEndFilterEl) windowEndFilterEl.value = '';
+    if (windowAltitudeFilterEl) windowAltitudeFilterEl.value = '';
+    updateWindowAltitudeAvailability();
     refreshResults();
 });
 
