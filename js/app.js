@@ -1,7 +1,8 @@
 import { fetchObjects, searchObjects } from './api.js';
 import { CelestialObject } from './CelestialObject.js';
 import { fetchSolarSystemBodies, objectFromFavorite } from './objectFactory.js';
-import { renderObjectList, renderPlanList, renderDetailPanel, setLoadingState, setErrorState } from './render.js';
+import { renderObjectList, renderDetailPanel, setLoadingState, setErrorState } from './render.js';
+import { renderScheduler } from './scheduler.js';
 import {
     addFavorite,
     removeFavorite,
@@ -11,6 +12,9 @@ import {
     setLastLocation,
     getLastDate,
     setLastDate,
+    getPlanOverrides,
+    setPlanOverride,
+    clearPlanOverride,
 } from './storage.js';
 import { geocodeLocation } from './geocode.js';
 import { TYPE_LABELS, SOLAR_SYSTEM_TYPE_LABELS } from './typeLabels.js';
@@ -349,10 +353,27 @@ function renderFavorites() {
     );
 }
 
-// Tonight's viewing order: favorites that are up on the selected date, sorted
-// by rise time, so the list itself reads as a plan for the session rather
-// than just a sortable grid (that's what the Saved Objects tab is for).
+function planKey(object) {
+    return `${object.catalog}:${object.catalogId}`;
+}
+
+function roundDownToHalfHour(date) {
+    const ms = 30 * 60 * 1000;
+    return new Date(Math.floor(date.getTime() / ms) * ms);
+}
+
+function roundUpToHalfHour(date) {
+    const ms = 30 * 60 * 1000;
+    return new Date(Math.ceil(date.getTime() / ms) * ms);
+}
+
+// Tonight's observing schedule: favorites that are up on the selected date, laid out
+// on a shared timeline as draggable rise→set bars (see js/scheduler.js). Any start/end
+// the user has dragged away from the natural rise/set is persisted per date+object via
+// storage.js, so it survives switching tabs, changing the date and back, and reloads.
 function renderPlan() {
+    const dateKey = toDateInputValue(state.date);
+    const overrides = getPlanOverrides(dateKey);
     const favorites = getFavorites()
         .map(f => objectFromFavorite(f, state.date))
         .filter(Boolean);
@@ -360,31 +381,61 @@ function renderPlan() {
     const visibleEntries = [];
     const notVisible = [];
     for (const object of favorites) {
-        const { riseTime, transitTime, setTime } = object.getVisibilityWindow(state.location, state.date);
-        // No transitTime means either circumpolar (already up, nothing to wait for) or
-        // never rises at all that date - isVisibleAt() disambiguates the two.
-        const isUp = transitTime ? true : object.isVisibleAt(state.location, state.date);
+        const { riseTime, setTime } = object.getVisibilityWindow(state.location, state.date);
+        // No riseTime means either circumpolar (already up, no rise to find) or never
+        // rises at all that date - isVisibleAt() disambiguates the two.
+        const isUp = riseTime ? true : object.isVisibleAt(state.location, state.date);
         if (isUp) {
-            visibleEntries.push({ object, riseTime, transitTime, setTime });
+            visibleEntries.push({ object, originalStart: riseTime, originalEnd: setTime, circumpolar: !riseTime });
         } else {
             notVisible.push(object);
         }
     }
 
-    // Rise time ascending; circumpolar objects (no specific rise) sort first, since
-    // they're already up and there's nothing to wait for.
-    visibleEntries.sort((a, b) => {
-        if (!a.riseTime && !b.riseTime) return 0;
-        if (!a.riseTime) return -1;
-        if (!b.riseTime) return 1;
-        return a.riseTime.getTime() - b.riseTime.getTime();
-    });
+    // The timeline's shared axis spans every real (non-circumpolar) rise/set window that
+    // night, padded a little for breathing room. If every visible favorite is circumpolar
+    // there's nothing to anchor the axis to, so it falls back to a generic evening-to-
+    // morning span.
+    const withWindows = visibleEntries.filter((e) => !e.circumpolar);
+    let timelineStart;
+    let timelineEnd;
+    if (withWindows.length > 0) {
+        const minStart = Math.min(...withWindows.map((e) => e.originalStart.getTime()));
+        const maxEnd = Math.max(...withWindows.map((e) => e.originalEnd.getTime()));
+        timelineStart = roundDownToHalfHour(new Date(minStart - 15 * 60 * 1000));
+        timelineEnd = roundUpToHalfHour(new Date(maxEnd + 15 * 60 * 1000));
+    } else {
+        timelineStart = timeOnDate(state.date, '18:00');
+        timelineEnd = new Date(timeOnDate(state.date, '06:00').getTime() + 24 * 60 * 60 * 1000);
+    }
 
-    renderPlanList(
+    for (const entry of visibleEntries) {
+        if (entry.circumpolar) {
+            entry.originalStart = timelineStart;
+            entry.originalEnd = timelineEnd;
+        }
+        const override = overrides[planKey(entry.object)];
+        entry.start = override ? new Date(override.start) : entry.originalStart;
+        entry.end = override ? new Date(override.end) : entry.originalEnd;
+    }
+
+    // Start time ascending; circumpolar objects (pinned to the timeline's own start)
+    // sort first, since they're already up and there's nothing to wait for.
+    visibleEntries.sort((a, b) => a.originalStart.getTime() - b.originalStart.getTime());
+
+    renderScheduler(
         planListEl,
-        visibleEntries,
-        notVisible,
-        { onSelect: handleSelectObject },
+        { timelineStart, timelineEnd, entries: visibleEntries, notVisibleObjects: notVisible },
+        {
+            onSelect: handleSelectObject,
+            onTimesChange: (entry, start, end) => {
+                setPlanOverride(dateKey, planKey(entry.object), { start: start.toISOString(), end: end.toISOString() });
+            },
+            onResetTimes: (entry) => {
+                clearPlanOverride(dateKey, planKey(entry.object));
+                renderPlan();
+            },
+        },
         'No saved objects yet. Click the star on any object to save it.'
     );
 }

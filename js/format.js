@@ -10,6 +10,12 @@ export function formatTime(date) {
     return date ? date.toLocaleString() : 'unknown';
 }
 
+// Just the clock time (e.g. "9:45 PM"), for compact labels like the scheduler's
+// ruler ticks and bar labels where the full date would be redundant/too wide.
+export function formatClockTime(date) {
+    return date ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '—';
+}
+
 // Formats RA as sexagesimal hr:min:sec.s (e.g. "05:35:17.2"). Rounds to the nearest
 // tenth of a second first, rather than rounding h/m/s independently, so a value like
 // 59.96s correctly carries over into the next minute instead of displaying as "60.0".

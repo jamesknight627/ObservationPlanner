@@ -1,6 +1,7 @@
 const FAVORITES_KEY = 'astro-planner:favorites';
 const LOCATION_KEY = 'astro-planner:last-location';
 const DATE_KEY = 'astro-planner:last-date';
+const PLAN_OVERRIDES_KEY = 'astro-planner:plan-overrides';
 
 export function getFavorites() {
     return JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? '[]');
@@ -41,4 +42,29 @@ export function getLastDate() {
 
 export function setLastDate(date) {
     localStorage.setItem(DATE_KEY, date.toISOString());
+}
+
+function getAllPlanOverrides() {
+    const raw = localStorage.getItem(PLAN_OVERRIDES_KEY);
+    return raw ? JSON.parse(raw) : {};
+}
+
+// User-adjusted start/end times for the Plan tab's scheduler, keyed by date (so a
+// tweak made for one night doesn't carry over to the next) and then by object.
+export function getPlanOverrides(dateKey) {
+    return getAllPlanOverrides()[dateKey] ?? {};
+}
+
+export function setPlanOverride(dateKey, objectKey, times) {
+    const all = getAllPlanOverrides();
+    all[dateKey] = { ...(all[dateKey] ?? {}), [objectKey]: times };
+    localStorage.setItem(PLAN_OVERRIDES_KEY, JSON.stringify(all));
+}
+
+export function clearPlanOverride(dateKey, objectKey) {
+    const all = getAllPlanOverrides();
+    if (!all[dateKey]) return;
+    delete all[dateKey][objectKey];
+    if (Object.keys(all[dateKey]).length === 0) delete all[dateKey];
+    localStorage.setItem(PLAN_OVERRIDES_KEY, JSON.stringify(all));
 }

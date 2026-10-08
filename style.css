@@ -298,61 +298,162 @@ button:focus-visible {
     display: none;
 }
 
-.plan-row-list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
+.plan-list__not-visible {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.scheduler {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
 
-.plan-row {
+.scheduler__ruler {
     display: flex;
-    align-items: baseline;
-    gap: 1rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 0.75rem 1rem;
-    cursor: pointer;
-    transition: border-color 0.15s ease;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
 }
 
-.plan-row:hover,
-.plan-row:focus-visible {
-    border-color: var(--accent);
+.scheduler__label-spacer {
+    flex: 0 0 9rem;
+}
+
+.scheduler__ruler-track {
+    position: relative;
+    flex: 1 1 auto;
+    height: 1rem;
+    margin-right: 2.25rem;
+}
+
+.scheduler__tick {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.scheduler__rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.scheduler__row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.scheduler__label {
+    flex: 0 0 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: left;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-size: 0.85rem;
+    padding: 0;
+    cursor: pointer;
+}
+
+.scheduler__label:hover,
+.scheduler__label:focus-visible {
+    color: var(--accent);
     outline: none;
 }
 
-.plan-row__time {
-    flex: 0 0 auto;
-    min-width: 5rem;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--accent);
+.scheduler__track {
+    position: relative;
+    flex: 1 1 auto;
+    height: 2.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
 }
 
-.plan-row__body {
+.scheduler__ghost {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+.scheduler__bar {
+    position: absolute;
+    top: 0.25rem;
+    bottom: 0.25rem;
     display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    min-width: 0;
+    align-items: center;
+    background: var(--surface-hover);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    min-width: 1.25rem;
 }
 
-.plan-row__name {
+.scheduler__bar-label {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.75rem;
+    color: var(--text);
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+.scheduler__handle {
+    flex: 0 0 0.6rem;
+    align-self: stretch;
+    background: var(--accent);
+    border: none;
+    padding: 0;
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.scheduler__handle--start {
+    margin-right: auto;
+    border-radius: 6px 0 0 6px;
+}
+
+.scheduler__handle--end {
+    margin-left: auto;
+    border-radius: 0 6px 6px 0;
+}
+
+.scheduler__handle:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 1px;
+}
+
+.scheduler__reset {
+    flex: 0 0 1.5rem;
+    background: none;
+    border: none;
+    color: var(--text-muted);
     font-size: 1rem;
+    padding: 0;
+    cursor: pointer;
 }
 
-.plan-row__window {
-    font-size: 0.8rem;
-    color: var(--text-muted);
+.scheduler__reset[hidden] {
+    display: none;
 }
 
-.plan-list__not-visible {
-    margin-top: 1rem;
-    font-size: 0.85rem;
-    color: var(--text-muted);
+.scheduler__reset:hover,
+.scheduler__reset:focus-visible {
+    color: var(--accent);
+    outline: none;
 }
 
 .detail-panel {

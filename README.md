@@ -28,12 +28,18 @@ marker and label, with one click.
   Wikipedia summary and photo when one is available.
 - **Saved objects** — a favorites tab backed by `localStorage`, so a returning
   visitor doesn't have to re-search objects they cared about.
-- **Plan** — a third tab that turns your saved objects into a viewing order
-  for the selected date: favorites that are up that night, sorted by rise
-  time and showing rise/apex/set for each, so the list itself reads as a
-  session plan. Favorites that aren't up at all that date are named
-  separately rather than silently dropped. Click a row to open its detail
-  panel, same as a result card.
+- **Plan** — a third tab that lays your saved objects out as a schedule for
+  the selected date: each favorite that's up that night gets its own row on
+  a shared timeline, as a bar spanning its natural rise-to-set window. Drag
+  either edge of a bar (or use the arrow keys when it's focused) to narrow
+  or shift that object's observing window — the original rise/set span
+  stays visible behind the bar as a grayed "ghost," and a reset button
+  appears on any row you've adjusted. Changes are remembered per date, so
+  they're still there if you switch tabs or reload. A circumpolar favorite
+  (never sets that night) gets a bar spanning the whole timeline instead of
+  a rise/set-derived one. Favorites that aren't up at all that date are
+  named separately rather than silently dropped. Click a row's name to open
+  its detail panel, same as a result card.
 - **Persisted session** — last-used location and date are remembered between
   visits.
 - **Planetarium dome control (Digistar 7)** — when the site is served by
@@ -163,8 +169,9 @@ js/
   app.js                  Planner page controller: state, event wiring, pagination
   object.js               Object detail page controller
   render.js               DOM rendering for cards, lists, and the detail panel
+  scheduler.js             Plan tab's draggable timeline (rendering + resize interactions)
   digistar.js             Digistar dome control: builds and sends commands, dome buttons
-  storage.js               localStorage helpers (favorites, last location/date)
+  storage.js               localStorage helpers (favorites, last location/date, plan overrides)
   geocode.js               Place-name -> lat/lon via OpenStreetMap Nominatim
   wikipedia.js             Wikipedia REST summary lookup (photo + description)
   format.js                Display formatting (times, coordinates, durations, units)
