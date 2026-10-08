@@ -495,27 +495,33 @@ commands (the flag still thinks they exist) until a reset forces it. See
   Digistar's browser that property is simply unrecognized and ignored -
   leaving those elements with no actual top/right/bottom/left, so they
   collapsed instead of filling their container. Fixed by spelling out
-  `top`/`right`/`bottom`/`left` individually instead. There's also a font
-  angle, confirmed as a second real bug on real hardware: a handful of
-  arrow characters (`←`/`→`, from the "Arrows" Unicode block, U+2190/U+2192)
-  used for things like the Prev/Next buttons and "Back to planner" links
-  rendered as garbled text, most likely because Digistar's embedded
-  environment doesn't ship a font with glyphs for that block - unlike
-  common Latin-1 Supplement characters (`°`, `×`, …) which are virtually
-  guaranteed to render anywhere. Fixed by using plain ASCII (`<`/`>`)
-  instead of Unicode arrow glyphs for navigation. If another decorative
-  Unicode character (★, ↺, ‹, ›, em/en dashes, prime marks, …) turns up
-  broken on the dome too, the same fix applies: replace it with an
-  ASCII-safe equivalent rather than trying to fix the encoding, since the
-  declared charset was already correct (confirmed: `<meta charset="UTF-8">`
-  is the first thing in every page's `<head>`) - this looks like missing
-  font glyphs, not a mis-declared encoding.
-  Keep this in mind (JS, CSS, *and* which characters you type into user-
-  facing text) when making changes - test newer-looking CSS properties
-  against [caniuse.com](https://caniuse.com) for Chrome 84 support, and
-  prefer plain ASCII for anything Digistar's embedded browser will render,
-  since this sandbox can't run Digistar's actual browser to catch either
-  kind of problem directly.
+  `top`/`right`/`bottom`/`left` individually instead. There's also a
+  second confirmed real-hardware bug, this one about *text* rather than
+  code: the Prev/Next buttons and the "Back to planner" links (all typed
+  directly into static HTML, e.g. `← Prev` in `index.html`) rendered as
+  garbled text, while the identical `→` character used the identical way
+  in "More details" and "View on Wikipedia" - built as JS template-literal
+  strings and inserted via `innerHTML` at runtime, rather than sitting in
+  the HTML file itself - rendered correctly. The UTF-8 charset meta tag is
+  already the first thing in every page's `<head>`, and the same codepoint
+  survives fine once it's JS rather than raw HTML, so this doesn't look
+  like a missing font glyph after all - more likely something in however
+  the `.html` files specifically reach Digistar (its web server, or a
+  deployment/copy step) re-encodes them along the way. Fixed by switching
+  the static-HTML arrows to plain ASCII (`<`/`>`) rather than chasing the
+  transcoding itself, and the two JS-built ones were changed to match for
+  consistency even though they weren't broken. If another non-ASCII
+  character typed directly into an `.html` file (★, ↺, ‹, ›, em/en dashes,
+  prime marks, °, …) turns up broken on the dome, this is the first thing
+  to suspect - the same fix applies (ASCII in, ASCII out), and whether
+  that same character is fine when it instead comes from a JS string is a
+  useful data point for narrowing down where the real re-encoding happens.
+  Keep this in mind (JS and CSS compatibility, *and* which characters you
+  type directly into `.html` files) when making changes - test newer-
+  looking CSS properties against [caniuse.com](https://caniuse.com) for
+  Chrome 84 support, and prefer plain ASCII in the `.html` files for
+  anything Digistar will render, since this sandbox can't run Digistar's
+  actual browser or web server to catch either kind of problem directly.
 - The Digistar User's Guide uses `/digistar/execute` in its HTTP command
   reference but `/software/execute` in its sample page. Sky Tonight uses the
   former; if commands fail with HTTP 404, change `EXECUTE_PATH` in
