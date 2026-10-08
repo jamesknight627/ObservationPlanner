@@ -433,8 +433,13 @@ Both are created once per Digistar session (a module-level flag in
 `js/digistar.js` tracks this, not anything persisted) using Digistar's
 `<name> is <class>` object-creation syntax, confirmed working on real
 hardware. Re-running that creation command isn't attempted on later clicks
-within the same page load; see [Known limitations](#known-limitations) for
-what happens on a page reload.
+within the same page load - except from a **Reset dome view** button (either
+one), which always forces both labels to be recreated and the location text
+reapplied, regardless of that flag. This is the recovery path if an operator
+clears the scene from Digistar's own console: that deletes the label objects
+without the page knowing, so every later sync keeps skipping their setup
+commands (the flag still thinks they exist) until a reset forces it. See
+[Known limitations](#known-limitations) for what happens on a page reload.
 
 ## Known limitations
 

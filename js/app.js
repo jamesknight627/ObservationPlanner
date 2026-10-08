@@ -642,7 +642,7 @@ async function runFavoritesDomeAction(action, busyText, getSuccessText) {
 favoritesDomeAddBtn?.addEventListener('click', () =>
     runFavoritesDomeAction(addAllFavoritesToDome, 'Adding…', (message) => message));
 favoritesDomeResetBtn?.addEventListener('click', () =>
-    runFavoritesDomeAction(resetAllDome, 'Resetting…', () => 'Dome view reset'));
+    runFavoritesDomeAction(() => resetAllDome(state.location?.label), 'Resetting…', () => 'Dome view reset'));
 
 clearFiltersBtn?.addEventListener('click', () => {
     state.filters = {

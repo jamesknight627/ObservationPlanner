@@ -213,6 +213,24 @@ async function syncLabelObjects(locationLabel) {
     }
 }
 
+// Forces the on-dome labels to be recreated, even though "labelObjectsCreated"
+// thinks they already exist. That flag only tracks what *this page* has done -
+// if an operator clears the scene from Digistar's own console, the text
+// objects are deleted without our page knowing, and every later "Show on
+// dome"/sync call keeps skipping their setup commands because the flag is
+// still set. Used by the reset controls below so clicking one always leaves
+// the labels in a working state, however the dome got cleared.
+//
+// The date/time label doesn't need the current date passed in - its text is
+// parameter-bound to Digistar's own "scene date" ("parameter 0 scene date" in
+// ensureLabelObjectsExist()), so it re-populates itself once recreated. The
+// location label isn't parameter-bound, so its text is explicitly reapplied,
+// same as a normal sync.
+async function reinitializeLabelObjects(locationLabel) {
+    labelObjectsCreated = false;
+    await syncLabelObjects(locationLabel);
+}
+
 // Turns on an object's marker and label - confirmed on real hardware for both
 // Messier/NGC objects and planets, with no "scene add" needed first for
 // either's marker/label specifically.
@@ -396,6 +414,10 @@ export async function sendToDome(target) {
 // target of interest, which is left as-is. Works even if the current target
 // itself isn't a Digistar-supported object (nothing to exclude then, so
 // everything else still gets cleared) or was never shown (nothing to do).
+// Also reinitializes the on-dome labels (see reinitializeLabelObjects()) using
+// the location this control was built with, so "Reset dome view" doubles as
+// the recovery path if an operator cleared the scene on Digistar's own
+// console and wiped them.
 export async function resetDome(target) {
     const currentName = classifyTarget(target)?.name;
     for (const [name, kind] of [...shownDigistarNames]) {
@@ -403,16 +425,19 @@ export async function resetDome(target) {
         await sendCommands(buildHideCommandsFor(kind, name));
         shownDigistarNames.delete(name);
     }
+    await reinitializeLabelObjects(target?.locationLabel);
 }
 
 // Turns off every object shown on the dome this session, with no exclusion -
 // used by the favorites tab's batch "Reset dome view" button, which has no
-// single "current" object the way an individual detail panel does.
-export async function resetAllDome() {
+// single "current" object the way an individual detail panel does. Also
+// reinitializes the on-dome labels, same as resetDome() above.
+export async function resetAllDome(locationLabel) {
     for (const [name, kind] of [...shownDigistarNames]) {
         await sendCommands(buildHideCommandsFor(kind, name));
         shownDigistarNames.delete(name);
     }
+    await reinitializeLabelObjects(locationLabel);
 }
 
 // ---------------------------------------------------------------------------
