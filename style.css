@@ -443,6 +443,21 @@ button:focus-visible {
     pointer-events: none;
 }
 
+/* Only set on the full-height overlay's spans (see `trimToLabels` in buildSunMarkSpans(),
+   js/scheduler.js), not a row's own copy. Without this, "top: 0" above puts every line's
+   top edge at the very top of .scheduler__sun-labels-track - well above a tier0 label's
+   own text, which sits at the *bottom* of that track. These stop each line ~5px below
+   its own flag's text instead: track height (2.1rem) minus how far up that tier's label
+   sits (0 for tier0, 1.05rem for tier1 - see .scheduler__sun-mark-label--tier1), plus the
+   5px gap. */
+.scheduler__sun-mark--tier0 {
+    top: calc(2.1rem + 5px);
+}
+
+.scheduler__sun-mark--tier1 {
+    top: calc(2.1rem - 1.05rem + 5px);
+}
+
 /* Each line gets its own color AND its own repeating pattern (solid/dashed/dotted/
    dash-dot), so no two are distinguishable by color alone - see the matching
    .scheduler__legend-swatch--* rules below, which reuse the same patterns as a key. */
@@ -639,8 +654,14 @@ button:focus-visible {
     cursor: pointer;
 }
 
+/* Stays a flex item (keeping its reserved width) even when hidden, rather than
+   "display: none" collapsing it out of the row - otherwise .scheduler__track's
+   "flex: 1 1 auto" would grow to fill the reclaimed space the instant a drag makes the
+   reset button appear, visibly resizing/rescaling the bar and altitude graph mid-use. */
 .scheduler__reset[hidden] {
-    display: none;
+    display: block;
+    visibility: hidden;
+    pointer-events: none;
 }
 
 .scheduler__reset:hover,

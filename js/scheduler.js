@@ -231,16 +231,22 @@ function hasAnySunMark(sunMarks) {
 // track, so each row's line stays visible crossing its altitude graph/ghost/bar rather
 // than being hidden behind their backgrounds (the overlay alone only shows in the gaps
 // between rows, since a track's own background would otherwise cover it).
-function buildSunMarkSpans(timelineStart, timelineEnd, sunMarks) {
+//
+// `trimToLabels` tags each span with its tier (see .scheduler__sun-mark--tier0/--tier1
+// in style.css), which stops it a few pixels below its own flag's text instead of
+// running the line through the reserved label row's full height - only meaningful for
+// the full-height overlay; a row's own copy is already scoped to just that row's track.
+function buildSunMarkSpans(timelineStart, timelineEnd, sunMarks, { trimToLabels = false } = {}) {
     if (!sunMarks) return [];
     const startMs = timelineStart.getTime();
     const endMs = timelineEnd.getTime();
     const spans = [];
-    for (const { key, kind } of SUN_MARK_DEFS) {
+    for (const { key, kind, tier } of SUN_MARK_DEFS) {
         const time = sunMarks[key];
         if (!time) continue;
         const mark = document.createElement('span');
         mark.className = `scheduler__sun-mark scheduler__sun-mark--${kind}`;
+        if (trimToLabels) mark.classList.add(`scheduler__sun-mark--tier${tier}`);
         mark.style.left = `${pct(time.getTime(), startMs, endMs)}%`;
         spans.push(mark);
     }
@@ -254,7 +260,7 @@ function buildSunMarkSpans(timelineStart, timelineEnd, sunMarks) {
 function renderSunMarkOverlay(timelineStart, timelineEnd, sunMarks) {
     const container = document.createElement('div');
     container.className = 'scheduler__sun-marks';
-    container.append(...buildSunMarkSpans(timelineStart, timelineEnd, sunMarks));
+    container.append(...buildSunMarkSpans(timelineStart, timelineEnd, sunMarks, { trimToLabels: true }));
     return container;
 }
 
