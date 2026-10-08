@@ -367,6 +367,23 @@ function roundUpToHalfHour(date) {
     return new Date(Math.ceil(date.getTime() / ms) * ms);
 }
 
+// Evenly-spaced altitude readings across the timeline, for the scheduler's per-row
+// altitude graph - deliberately independent of each object's own start/end, so the
+// curve always shows the object's full path through the sky that night, not just
+// whatever window is currently selected.
+const ALTITUDE_SAMPLE_COUNT = 48;
+
+function sampleAltitude(object, location, start, end, count) {
+    const startMs = start.getTime();
+    const endMs = end.getTime();
+    const samples = [];
+    for (let i = 0; i < count; i++) {
+        const t = new Date(startMs + ((endMs - startMs) * i) / (count - 1));
+        samples.push(object.toAltAz(location, t)?.altitude ?? 0);
+    }
+    return samples;
+}
+
 // Tonight's observing schedule: favorites that are up on the selected date, laid out
 // on a shared timeline as draggable rise→set bars (see js/scheduler.js). Any start/end
 // the user has dragged away from the natural rise/set is persisted per date+object via
@@ -417,6 +434,7 @@ function renderPlan() {
         const override = overrides[planKey(entry.object)];
         entry.start = override ? new Date(override.start) : entry.originalStart;
         entry.end = override ? new Date(override.end) : entry.originalEnd;
+        entry.altitudeSamples = sampleAltitude(entry.object, state.location, timelineStart, timelineEnd, ALTITUDE_SAMPLE_COUNT);
     }
 
     // Start time ascending; circumpolar objects (pinned to the timeline's own start)

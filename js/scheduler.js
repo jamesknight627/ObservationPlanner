@@ -20,6 +20,49 @@ function positionBar(el, start, end, timelineStart, timelineEnd) {
     el.style.width = `${pct(end.getTime(), startMs, endMs) - pct(start.getTime(), startMs, endMs)}%`;
 }
 
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+// A filled altitude-over-time curve, scaled to its own row's track (not shared across
+// rows), so it always uses the full height regardless of how high this particular
+// object gets. The horizon (0°) always stays within the plotted range, even if every
+// sample is on one side of it, so the dashed horizon line is always meaningful.
+function renderAltitudeGraph(samples) {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('class', 'scheduler__altitude');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('preserveAspectRatio', 'none');
+
+    let altMin = Math.min(0, ...samples);
+    let altMax = Math.max(0, ...samples);
+    if (altMax - altMin < 1) altMax = altMin + 1;
+    altMax += (altMax - altMin) * 0.08;
+
+    const yFor = (alt) => 100 - ((alt - altMin) / (altMax - altMin)) * 100;
+    const points = samples.map((alt, i) => ({
+        x: (i / (samples.length - 1)) * 100,
+        y: yFor(alt),
+    }));
+
+    const areaPath = document.createElementNS(SVG_NS, 'path');
+    const linePoints = points.map((p) => `${p.x},${p.y}`).join(' ');
+    areaPath.setAttribute('class', 'scheduler__altitude-area');
+    areaPath.setAttribute('d', `M0,100 L${linePoints} L100,100 Z`);
+
+    const line = document.createElementNS(SVG_NS, 'polyline');
+    line.setAttribute('class', 'scheduler__altitude-line');
+    line.setAttribute('points', linePoints);
+
+    const horizon = document.createElementNS(SVG_NS, 'line');
+    horizon.setAttribute('class', 'scheduler__altitude-horizon');
+    horizon.setAttribute('x1', '0');
+    horizon.setAttribute('x2', '100');
+    horizon.setAttribute('y1', String(yFor(0)));
+    horizon.setAttribute('y2', String(yFor(0)));
+
+    svg.append(areaPath, line, horizon);
+    return svg;
+}
+
 function isOverridden(entry) {
     return entry.start.getTime() !== entry.originalStart.getTime() ||
         entry.end.getTime() !== entry.originalEnd.getTime();
@@ -219,7 +262,10 @@ function renderRow(entry, timelineStart, timelineEnd, handlers) {
         onCommit: (t) => { applyTimes(entry.start, t); handlers.onTimesChange?.(entry, entry.start, entry.end); },
     });
 
-    track.append(ghost, bar);
+    const parts = [];
+    if (entry.altitudeSamples) parts.push(renderAltitudeGraph(entry.altitudeSamples));
+    parts.push(ghost, bar);
+    track.append(...parts);
     row.append(label, track, resetBtn);
     return row;
 }
@@ -230,9 +276,11 @@ function renderRow(entry, timelineStart, timelineEnd, handlers) {
 // "ghost" so the user can always see how far they've adjusted from it. Favorites that
 // aren't up at all that date are named separately below rather than silently dropped.
 //
-// `entries` is [{ object, originalStart, originalEnd, start, end }] - originalStart/End
-// are the natural rise/set (or the timeline's own bounds for a circumpolar object with
-// no rise/set that day); start/end are the current, possibly user-adjusted, window.
+// `entries` is [{ object, originalStart, originalEnd, start, end, altitudeSamples }] -
+// originalStart/End are the natural rise/set (or the timeline's own bounds for a
+// circumpolar object with no rise/set that day); start/end are the current, possibly
+// user-adjusted, window; altitudeSamples (optional) is the object's altitude in degrees
+// at evenly-spaced points across the whole timeline, plotted as the track's background.
 export function renderScheduler(container, { timelineStart, timelineEnd, entries, notVisibleObjects }, handlers, emptyMessage) {
     container.innerHTML = '';
     if (entries.length === 0 && notVisibleObjects.length === 0) {
