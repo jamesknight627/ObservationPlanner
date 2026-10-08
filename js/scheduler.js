@@ -353,15 +353,19 @@ function renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks) {
     startHandle.className = 'scheduler__handle scheduler__handle--start';
     startHandle.setAttribute('aria-label', `Adjust start time for ${entry.object.cardTitle}`);
 
-    const barLabel = document.createElement('span');
-    barLabel.className = 'scheduler__bar-label';
-
     const endHandle = document.createElement('button');
     endHandle.type = 'button';
     endHandle.className = 'scheduler__handle scheduler__handle--end';
     endHandle.setAttribute('aria-label', `Adjust end time for ${entry.object.cardTitle}`);
 
-    bar.append(startHandle, barLabel, endHandle);
+    bar.append(startHandle, endHandle);
+
+    // A direct child of the track, not of the bar - the bar (and everything else that
+    // paints inside the track) is clipped to the track's rounded corners by the inner
+    // .scheduler__track-content wrapper below, but the label sits just *above* the
+    // track, so it has to live outside that clipped wrapper to avoid being cut off.
+    const barLabel = document.createElement('span');
+    barLabel.className = 'scheduler__bar-label';
 
     const resetBtn = document.createElement('button');
     resetBtn.type = 'button';
@@ -375,6 +379,8 @@ function renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks) {
         entry.start = start;
         entry.end = end;
         positionBar(bar, start, end, timelineStart, timelineEnd);
+        const midpointMs = (start.getTime() + end.getTime()) / 2;
+        barLabel.style.left = `${pct(midpointMs, timelineStart.getTime(), timelineEnd.getTime())}%`;
         barLabel.textContent = `${formatClockTime(start)}–${formatClockTime(end)}`;
         resetBtn.hidden = !isOverridden(entry);
     }
@@ -395,11 +401,15 @@ function renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks) {
         onCommit: (t) => { applyTimes(entry.start, t); handlers.onTimesChange?.(entry, entry.start, entry.end); },
     });
 
+    const content = document.createElement('div');
+    content.className = 'scheduler__track-content';
     const parts = [];
     if (entry.altitudeSamples) parts.push(renderAltitudeGraph(entry.altitudeSamples));
     parts.push(...buildSunMarkSpans(timelineStart, timelineEnd, sunMarks));
     parts.push(ghost, bar);
-    track.append(...parts);
+    content.append(...parts);
+
+    track.append(content, barLabel);
     row.append(label, track, resetBtn);
     return row;
 }

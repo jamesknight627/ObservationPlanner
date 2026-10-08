@@ -546,13 +546,23 @@ button:focus-visible {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
+}
+
+/* Everything that needs clipping to the track's rounded corners (the altitude graph,
+   sun-mark lines, ghost, and bar) lives in here rather than directly in .scheduler__track
+   - .scheduler__bar-label is a sibling of this instead, so it can sit just above the
+   track without this wrapper's own overflow:hidden cutting it off. */
+.scheduler__track-content {
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
     overflow: hidden;
 }
 
 /* The object's altitude-over-time curve, filling the track as a backdrop behind the
    ghost and the draggable bar (both given translucent backgrounds below so it still
-   reads through them). Scaled to a fixed, shared 0-90° range (horizon to zenith) rather
-   than each row's own min/max, so curve height is directly comparable row to row - see
+   reads through them). Scaled to a fixed, shared -20°-to-90° range rather than each
+   row's own min/max, so curve height is directly comparable row to row - see
    renderAltitudeGraph() in js/scheduler.js. */
 .scheduler__altitude {
     position: absolute;
@@ -606,11 +616,16 @@ button:focus-visible {
     min-width: 1.25rem;
 }
 
+/* Positioned by JS (applyTimes() in js/scheduler.js) to track the bar's horizontal
+   midpoint as it's dragged; "bottom" anchors it just above the track - a direct child of
+   .scheduler__track, not of .scheduler__bar, so it isn't clipped by the track's own
+   rounded-corner overflow (see .scheduler__track-content). */
 .scheduler__bar-label {
     position: absolute;
-    left: 50%;
+    bottom: calc(100% + 2px);
     transform: translateX(-50%);
-    background: rgba(11, 13, 23, 0.55);
+    background: var(--bg);
+    border: 1px solid var(--border);
     border-radius: 4px;
     padding: 0.05rem 0.35rem;
     font-size: 0.75rem;
