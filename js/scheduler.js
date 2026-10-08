@@ -22,22 +22,24 @@ function positionBar(el, start, end, timelineStart, timelineEnd) {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// A filled altitude-over-time curve, scaled to its own row's track (not shared across
-// rows), so it always uses the full height regardless of how high this particular
-// object gets. The horizon (0°) always stays within the plotted range, even if every
-// sample is on one side of it, so the dashed horizon line is always meaningful.
+// Horizon-to-zenith, fixed and shared by every row's graph (rather than each row scaling
+// to its own min/max), so how tall a curve stands directly reflects how high that object
+// actually gets - comparable at a glance across every row. A sample below the horizon
+// just clamps to 0° (a flat line along the bottom), since what matters here is how high
+// each object climbs, not how far below the horizon it dips.
+const ALTITUDE_DOMAIN_MIN = 0;
+const ALTITUDE_DOMAIN_MAX = 90;
+
 function renderAltitudeGraph(samples) {
     const svg = document.createElementNS(SVG_NS, 'svg');
     svg.setAttribute('class', 'scheduler__altitude');
     svg.setAttribute('viewBox', '0 0 100 100');
     svg.setAttribute('preserveAspectRatio', 'none');
 
-    let altMin = Math.min(0, ...samples);
-    let altMax = Math.max(0, ...samples);
-    if (altMax - altMin < 1) altMax = altMin + 1;
-    altMax += (altMax - altMin) * 0.08;
-
-    const yFor = (alt) => 100 - ((alt - altMin) / (altMax - altMin)) * 100;
+    const yFor = (alt) => {
+        const clamped = Math.min(ALTITUDE_DOMAIN_MAX, Math.max(ALTITUDE_DOMAIN_MIN, alt));
+        return 100 - ((clamped - ALTITUDE_DOMAIN_MIN) / (ALTITUDE_DOMAIN_MAX - ALTITUDE_DOMAIN_MIN)) * 100;
+    };
     const points = samples.map((alt, i) => ({
         x: (i / (samples.length - 1)) * 100,
         y: yFor(alt),
@@ -52,14 +54,7 @@ function renderAltitudeGraph(samples) {
     line.setAttribute('class', 'scheduler__altitude-line');
     line.setAttribute('points', linePoints);
 
-    const horizon = document.createElementNS(SVG_NS, 'line');
-    horizon.setAttribute('class', 'scheduler__altitude-horizon');
-    horizon.setAttribute('x1', '0');
-    horizon.setAttribute('x2', '100');
-    horizon.setAttribute('y1', String(yFor(0)));
-    horizon.setAttribute('y2', String(yFor(0)));
-
-    svg.append(areaPath, line, horizon);
+    svg.append(areaPath, line);
     return svg;
 }
 

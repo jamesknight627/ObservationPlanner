@@ -35,8 +35,10 @@ marker and label, with one click.
   or shift that object's observing window — the original rise/set span
   stays visible behind the bar as a grayed "ghost," and a reset button
   appears on any row you've adjusted. Each row's track is also plotted with
-  that object's altitude over the course of the timeline, so you can see at
-  a glance how high it gets and line the bar up with its peak. Sunset,
+  that object's altitude over the course of the timeline, on a fixed
+  horizon-to-zenith (0-90°) scale shared by every row, so how tall a curve
+  stands is directly comparable from one object to the next - not just how
+  high each one gets on its own. Sunset,
   sunrise, and the start/end of civil twilight are marked as vertical lines
   running through every row, with time-labeled flags above the timeline, so
   it's easy to see which part of an object's window falls in full darkness.

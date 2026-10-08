@@ -461,7 +461,7 @@ button:focus-visible {
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.6rem;
+    gap: 1.2rem;
 }
 
 .scheduler__row {
@@ -493,7 +493,7 @@ button:focus-visible {
 .scheduler__track {
     position: relative;
     flex: 1 1 auto;
-    height: 2.25rem;
+    height: 3.375rem;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 6px;
@@ -502,8 +502,9 @@ button:focus-visible {
 
 /* The object's altitude-over-time curve, filling the track as a backdrop behind the
    ghost and the draggable bar (both given translucent backgrounds below so it still
-   reads through them). Scaled per-row to its own min/max altitude, not shared across
-   objects - see renderAltitudeGraph() in js/scheduler.js. */
+   reads through them). Scaled to a fixed, shared 0-90° range (horizon to zenith) rather
+   than each row's own min/max, so curve height is directly comparable row to row - see
+   renderAltitudeGraph() in js/scheduler.js. */
 .scheduler__altitude {
     position: absolute;
     inset: 0;
@@ -521,14 +522,6 @@ button:focus-visible {
     fill: none;
     stroke: rgba(255, 209, 102, 0.5);
     stroke-width: 1.5;
-    vector-effect: non-scaling-stroke;
-}
-
-.scheduler__altitude-horizon {
-    stroke: var(--text-muted);
-    stroke-width: 1;
-    stroke-dasharray: 2 2;
-    opacity: 0.5;
     vector-effect: non-scaling-stroke;
 }
 
