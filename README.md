@@ -202,7 +202,26 @@ js/
 ## Data sources
 
 - **[datastro.eu Explore API](https://www.datastro.eu/api/explore/v2.1/catalog/datasets/deep-sky-objects)**
-  — the deep-sky object catalog (position, magnitude, size, type, constellation).
+  — the deep-sky object catalog (position, magnitude, size, type, constellation),
+  ~220k objects (mostly galaxies, plus all known NGC/IC objects) drawn from:
+  - **M** — Messier (bright objects of all types)
+  - **NGC** — New General Catalogue (all types)
+  - **IC** — Index Catalogue (all types)
+  - **C** — Caldwell (bright objects of all types)
+  - **Col** — Collinder (open clusters and associations)
+  - **PK** — Perek + Kohoutek (planetary nebulas)
+  - **PGC** — Principal Galaxy Catalog
+  - **UGC** — Uppsala Galaxy Catalog
+  - **ESO** — European Southern Observatory Catalogue (galaxies)
+  - **Ter** — Terzian (globular clusters)
+  - **Pal** — Palomar (globular clusters)
+
+  Each record's `cat1`/`id1` (used throughout this app, e.g. `js/CelestialObject.js`)
+  is the object's primary/most-commonly-used catalog and ID; `cat2`/`id2` is a
+  secondary one (e.g. an NGC number for a Messier object). A `dupcat`/`dupid`
+  pair means the object is better known under that *other* designation - not
+  currently filtered out here, but worth knowing about if duplicate-looking
+  entries ever turn up.
 - **[datastro.eu Solar System data](https://www.datastro.eu/explore/dataset/donnees-systeme-solaire-solar-system-data/)**
   — physical facts for the Sun and planets (from NASA's Planetary Fact Sheets).
   The field names used are listed in `SOLAR_FIELDS` in `SolarSystemBody.js`.
