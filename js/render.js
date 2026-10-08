@@ -77,8 +77,17 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
         ? `<dt>From location</dt><dd>${location.label ?? formatCoords(location)}</dd>`
         : '';
 
+    // A fresh object always opens expanded, even if the panel was left minimized for a
+    // previous one - the grid column it sits in is sized by .app-body's own class, so
+    // that has to be cleared here too, not just the panel's own class.
+    panel.classList.remove('is-minimized');
+    document.querySelector('.app-body')?.classList.remove('detail-panel-minimized');
+
     panel.innerHTML = `
-        <button class="detail-panel__close" aria-label="Close detail panel">×</button>
+        <div class="detail-panel__toolbar">
+            <button class="detail-panel__minimize" aria-label="Minimize detail panel">›</button>
+            <button class="detail-panel__close" aria-label="Close detail panel">×</button>
+        </div>
         <h2>${object.heading}</h2>
         <dl class="detail-panel__attrs">
             ${nameRow}
@@ -98,9 +107,24 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
     `;
     panel.classList.add('is-open');
     panel.querySelector('.detail-panel__close')?.addEventListener('click', () => {
-        panel.classList.remove('is-open');
+        panel.classList.remove('is-open', 'is-minimized');
         panel.innerHTML = '';
+        document.querySelector('.app-body')?.classList.remove('detail-panel-minimized');
         onClose?.();
+    });
+
+    // Collapses the panel to a narrow strip along the side of the screen (see
+    // .detail-panel.is-minimized / .app-body.detail-panel-minimized in style.css), so
+    // the results column can reclaim the space while still showing which object is
+    // selected. Purely a CSS toggle - nothing here depends on app state, so it doesn't
+    // need to survive past the next render of this panel (a new object, or a close,
+    // already resets it above).
+    const minimizeBtn = panel.querySelector('.detail-panel__minimize');
+    minimizeBtn?.addEventListener('click', () => {
+        const minimized = panel.classList.toggle('is-minimized');
+        document.querySelector('.app-body')?.classList.toggle('detail-panel-minimized', minimized);
+        minimizeBtn.textContent = minimized ? '‹' : '›';
+        minimizeBtn.setAttribute('aria-label', minimized ? 'Expand detail panel' : 'Minimize detail panel');
     });
 
     // Hidden until isDomeAvailable() confirms Digistar's web interface is answering, so

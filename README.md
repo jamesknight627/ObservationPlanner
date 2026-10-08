@@ -22,6 +22,10 @@ marker and label, with one click.
   transit ("time at apex"), max altitude, set time, and time above the horizon,
   for the currently selected date and location. Solar-system bodies also show
   their distance from Earth, diameter, gravity, orbital period, and moon count.
+  The panel can be minimized to a narrow strip along the side of the screen
+  (the › button next to its close button) so the results column can reclaim
+  the space while still showing which object is selected; it re-expands on
+  click, or automatically when a different object is selected.
 - **Observing guide** — on the full object page (`object.html`), a second panel
   estimates the home constellation, minimum recommended magnification, minimum
   equipment, and darkest-sky (Bortle scale) tolerance for that object, plus a

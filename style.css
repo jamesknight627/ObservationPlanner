@@ -95,6 +95,13 @@ button:focus-visible {
     grid-template-columns: 1fr 320px;
     gap: 1rem;
     padding: 1rem 1.5rem;
+    transition: grid-template-columns 0.2s ease;
+}
+
+/* Detail panel minimized to a narrow strip (see .detail-panel__minimize in js/render.js)
+   - the results column reclaims the freed space automatically since it's the "1fr" track. */
+.app-body.detail-panel-minimized {
+    grid-template-columns: 1fr 2.5rem;
 }
 
 .tabs {
@@ -701,11 +708,48 @@ button:focus-visible {
     opacity: 0;
     transform: translateX(8px);
     transition: opacity 0.2s ease, transform 0.2s ease;
+    overflow: hidden;
 }
 
 .detail-panel.is-open {
     opacity: 1;
     transform: translateX(0);
+}
+
+/* Collapsed to a narrow strip along the side of the screen - see .app-body.detail-panel-
+   minimized, which shrinks the grid column this panel sits in so the results column can
+   reclaim the freed space. Everything but the toolbar and a vertical object name hides. */
+.detail-panel.is-minimized {
+    padding: 0.75rem 0.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.detail-panel.is-minimized .detail-panel__attrs,
+.detail-panel.is-minimized .detail-panel__more,
+.detail-panel.is-minimized .dome-control {
+    display: none;
+}
+
+.detail-panel.is-minimized h2 {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    margin: 0;
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+.detail-panel__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.35rem;
+}
+
+.detail-panel.is-minimized .detail-panel__toolbar {
+    flex-direction: column;
+    align-items: center;
 }
 
 .detail-panel__attrs {
@@ -727,12 +771,23 @@ button:focus-visible {
     white-space: nowrap;
 }
 
-.detail-panel__close {
-    float: right;
+.detail-panel__close,
+.detail-panel__minimize {
     background: none;
     border: none;
     color: var(--text-muted);
     font-size: 1.1rem;
+    line-height: 1;
+    padding: 0.1rem 0.3rem;
+    cursor: pointer;
+}
+
+.detail-panel__close:hover,
+.detail-panel__close:focus-visible,
+.detail-panel__minimize:hover,
+.detail-panel__minimize:focus-visible {
+    color: var(--accent);
+    outline: none;
 }
 
 .detail-panel__more {
@@ -841,6 +896,11 @@ button:focus-visible {
         border-radius: var(--radius) var(--radius) 0 0;
         max-height: 70vh;
         overflow-y: auto;
+    }
+
+    /* The bottom-sheet layout has no "side of the screen" to minimize to. */
+    .detail-panel__minimize {
+        display: none;
     }
 }
 
