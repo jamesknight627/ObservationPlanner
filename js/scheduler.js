@@ -22,12 +22,13 @@ function positionBar(el, start, end, timelineStart, timelineEnd) {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// Horizon-to-zenith, fixed and shared by every row's graph (rather than each row scaling
-// to its own min/max), so how tall a curve stands directly reflects how high that object
-// actually gets - comparable at a glance across every row. A sample below the horizon
-// just clamps to 0° (a flat line along the bottom), since what matters here is how high
-// each object climbs, not how far below the horizon it dips.
-const ALTITUDE_DOMAIN_MIN = 0;
+// Fixed and shared by every row's graph (rather than each row scaling to its own
+// min/max), so how tall a curve stands directly reflects how high that object actually
+// gets - comparable at a glance across every row. The domain extends 20° below the
+// horizon (rather than stopping at 0°) so the 0° reference line sits clearly inside the
+// chart, with real headroom below it, instead of being squeezed flush against the
+// track's own bottom border.
+const ALTITUDE_DOMAIN_MIN = -20;
 const ALTITUDE_DOMAIN_MAX = 90;
 
 function renderAltitudeGraph(samples) {
@@ -54,15 +55,15 @@ function renderAltitudeGraph(samples) {
     line.setAttribute('class', 'scheduler__altitude-line');
     line.setAttribute('points', linePoints);
 
-    // The 0° reference line. It sits essentially at the track's own bottom edge now that
-    // the domain is a fixed 0-90°, but is nudged up by 1 unit (~1% of the track's height)
-    // so its own dotted stroke isn't clipped clean off by the viewBox/track border.
+    // The 0° reference line, at its real proportional position in the domain (now that
+    // ALTITUDE_DOMAIN_MIN is below 0°, that's no longer the same as the chart's bottom
+    // edge).
     const horizon = document.createElementNS(SVG_NS, 'line');
     horizon.setAttribute('class', 'scheduler__altitude-horizon');
     horizon.setAttribute('x1', '0');
     horizon.setAttribute('x2', '100');
-    horizon.setAttribute('y1', '99');
-    horizon.setAttribute('y2', '99');
+    horizon.setAttribute('y1', String(yFor(0)));
+    horizon.setAttribute('y2', String(yFor(0)));
 
     svg.append(areaPath, line, horizon);
     return svg;

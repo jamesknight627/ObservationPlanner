@@ -40,10 +40,11 @@ marker and label, with one click.
   stays visible behind the bar as a grayed "ghost," and a reset button
   appears on any row you've adjusted. Each row's track is also plotted with
   that object's altitude over the course of the timeline, on a fixed
-  horizon-to-zenith (0-90°) scale shared by every row, so how tall a curve
-  stands is directly comparable from one object to the next - not just how
-  high each one gets on its own - each row's graph also keeps a horizon (0°)
-  reference line. Sunset, sunrise, and the start/end of civil twilight are
+  fixed -20°-to-90° scale shared by every row, so how tall a curve stands
+  is directly comparable from one object to the next - not just how high
+  each one gets on its own. The range dips below the horizon so the 0°
+  reference line each row keeps sits clearly inside the chart rather than
+  flush against its bottom edge. Sunset, sunrise, and the start/end of civil twilight are
   marked as vertical lines running the full height of the timeline, from a
   time-labeled flag above the ruler down through every row (including
   through each row's own bar and altitude curve), so it's easy to see which
