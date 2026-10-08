@@ -305,6 +305,9 @@ button:focus-visible {
 }
 
 .scheduler {
+    --scheduler-label-width: 9rem;
+    --scheduler-gutter: 0.75rem;
+    --scheduler-reset-width: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -313,30 +316,69 @@ button:focus-visible {
 .scheduler__ruler {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--scheduler-gutter);
     font-size: 0.7rem;
     color: var(--text-muted);
 }
 
 .scheduler__label-spacer {
-    flex: 0 0 9rem;
+    flex: 0 0 var(--scheduler-label-width);
 }
 
 .scheduler__ruler-track {
     position: relative;
     flex: 1 1 auto;
-    height: 1rem;
-    margin-right: 2.25rem;
+    height: 1.1rem;
+    margin-right: calc(var(--scheduler-reset-width) + var(--scheduler-gutter));
 }
 
+/* Unlabeled hour tick: a short stub mark, same spacing as the gridline behind the rows
+   below it, just without a time label (see MAX_LABELED_TICKS in scheduler.js). */
 .scheduler__tick {
     position: absolute;
-    top: 0;
+    bottom: 0;
+    width: 1px;
+    height: 0.3rem;
+    background: var(--border);
     transform: translateX(-50%);
+}
+
+.scheduler__tick--labeled {
+    bottom: auto;
+    top: 0;
+    width: auto;
+    height: auto;
+    background: none;
     white-space: nowrap;
 }
 
+.scheduler__body {
+    position: relative;
+}
+
+/* Lines sit behind the row list (see z-index on .scheduler__rows), spanning its full
+   height in one overlay so they run continuously through every row's track instead of
+   resetting at each row's own edges - the insets match the label/reset columns so the
+   lines land at the same x-position as the ruler's own ticks above them. */
+.scheduler__gridlines {
+    position: absolute;
+    inset: 0;
+    left: calc(var(--scheduler-label-width) + var(--scheduler-gutter));
+    right: calc(var(--scheduler-reset-width) + var(--scheduler-gutter));
+    pointer-events: none;
+}
+
+.scheduler__gridline {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--border);
+}
+
 .scheduler__rows {
+    position: relative;
+    z-index: 1;
     list-style: none;
     margin: 0;
     padding: 0;
@@ -348,11 +390,11 @@ button:focus-visible {
 .scheduler__row {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: var(--scheduler-gutter);
 }
 
 .scheduler__label {
-    flex: 0 0 9rem;
+    flex: 0 0 var(--scheduler-label-width);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -437,7 +479,7 @@ button:focus-visible {
 }
 
 .scheduler__reset {
-    flex: 0 0 1.5rem;
+    flex: 0 0 var(--scheduler-reset-width);
     background: none;
     border: none;
     color: var(--text-muted);

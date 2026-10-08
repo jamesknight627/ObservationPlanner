@@ -73,18 +73,24 @@ function attachHandleInteractions(handle, track, timelineStart, timelineEnd, { g
     });
 }
 
-// Tick spacing options, in minutes, from finest to coarsest. Picks the finest one that
-// still keeps the ruler to around 10 ticks or fewer, so labels don't run into each other
-// on a wide timeline (e.g. a near-circumpolar object's 18+ hour window).
-const TICK_STEP_MINUTES = [15, 30, 60, 120, 180, 240, 360, 480];
+const HOUR_MS = 60 * 60000;
 
-function pickTickStepMinutes(spanMs) {
-    const spanMinutes = spanMs / 60000;
-    for (const step of TICK_STEP_MINUTES) {
-        if (spanMinutes / step <= 10) return step;
+// Every whole-hour timestamp from timelineStart to timelineEnd - shared by the ruler's
+// ticks and the gridlines behind the rows, so the two always line up.
+function hourMarks(timelineStart, timelineEnd) {
+    const startMs = timelineStart.getTime();
+    const endMs = timelineEnd.getTime();
+    const marks = [];
+    for (let t = Math.ceil(startMs / HOUR_MS) * HOUR_MS; t <= endMs; t += HOUR_MS) {
+        marks.push(t);
     }
-    return TICK_STEP_MINUTES[TICK_STEP_MINUTES.length - 1];
+    return marks;
 }
+
+// Above roughly this many hour marks, labeling every single one starts to crowd them
+// into each other, so every hour still gets a tick mark but only every Nth one is
+// labeled with a time - the same convention as minor/major ticks on a ruler.
+const MAX_LABELED_TICKS = 10;
 
 function renderRuler(timelineStart, timelineEnd) {
     const ruler = document.createElement('div');
@@ -99,18 +105,41 @@ function renderRuler(timelineStart, timelineEnd) {
 
     const startMs = timelineStart.getTime();
     const endMs = timelineEnd.getTime();
-    const stepMs = pickTickStepMinutes(endMs - startMs) * 60000;
+    const marks = hourMarks(timelineStart, timelineEnd);
+    const labelStride = Math.max(1, Math.ceil(marks.length / MAX_LABELED_TICKS));
 
-    for (let t = Math.ceil(startMs / stepMs) * stepMs; t <= endMs; t += stepMs) {
+    marks.forEach((t, i) => {
         const tick = document.createElement('span');
         tick.className = 'scheduler__tick';
         tick.style.left = `${pct(t, startMs, endMs)}%`;
-        tick.textContent = formatClockTime(new Date(t));
+        if (i % labelStride === 0) {
+            tick.classList.add('scheduler__tick--labeled');
+            tick.textContent = formatClockTime(new Date(t));
+        }
         track.appendChild(tick);
-    }
+    });
 
     ruler.appendChild(track);
     return ruler;
+}
+
+// One vertical line per whole hour, as a single overlay behind the row list rather than
+// per-row, so the lines run continuously through every object's track - including
+// through the gaps between rows - instead of resetting at each row's own edges.
+function renderGridlines(timelineStart, timelineEnd) {
+    const gridlines = document.createElement('div');
+    gridlines.className = 'scheduler__gridlines';
+
+    const startMs = timelineStart.getTime();
+    const endMs = timelineEnd.getTime();
+    for (const t of hourMarks(timelineStart, timelineEnd)) {
+        const line = document.createElement('span');
+        line.className = 'scheduler__gridline';
+        line.style.left = `${pct(t, startMs, endMs)}%`;
+        gridlines.appendChild(line);
+    }
+
+    return gridlines;
 }
 
 function renderRow(entry, timelineStart, timelineEnd, handlers) {
@@ -211,12 +240,18 @@ export function renderScheduler(container, { timelineStart, timelineEnd, entries
         empty.textContent = 'None of your saved objects are up on this date.';
         scheduler.appendChild(empty);
     } else {
+        const body = document.createElement('div');
+        body.className = 'scheduler__body';
+        body.appendChild(renderGridlines(timelineStart, timelineEnd));
+
         const rows = document.createElement('ol');
         rows.className = 'scheduler__rows';
         for (const entry of entries) {
             rows.appendChild(renderRow(entry, timelineStart, timelineEnd, handlers));
         }
-        scheduler.appendChild(rows);
+        body.appendChild(rows);
+
+        scheduler.appendChild(body);
     }
 
     container.appendChild(scheduler);
