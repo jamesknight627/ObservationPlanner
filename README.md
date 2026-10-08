@@ -487,8 +487,19 @@ commands (the flag still thinks they exist) until a reset forces it. See
 - `sky on` briefly fades the dome to black and back. If that's distracting
   during a show, set `syncSky` to `false`.
 - Digistar's embedded browser was Chromium 84 as of the release notes, so the
-  code avoids newer JavaScript syntax (such as `??=`). Keep this in mind when
-  making changes.
+  code avoids newer JavaScript syntax (such as `??=`) *and* newer CSS - the
+  `inset` shorthand property (`inset: 0;` for `top/right/bottom/left: 0;`)
+  didn't ship until Chrome 87, and was the cause of a real bug: the Plan
+  tab's altitude graphs, sunset/sunrise/twilight lines, and draggable bars
+  all depend on elements positioned with `inset: 0` in `style.css`, and on
+  Digistar's browser that property is simply unrecognized and ignored -
+  leaving those elements with no actual top/right/bottom/left, so they
+  collapsed instead of filling their container. Fixed by spelling out
+  `top`/`right`/`bottom`/`left` individually instead. Keep this in mind
+  (both the JS and CSS side) when making changes - test newer-looking
+  properties against [caniuse.com](https://caniuse.com) for Chrome 84 support
+  before relying on them, since this sandbox can't run Digistar's actual
+  browser to catch it directly.
 - The Digistar User's Guide uses `/digistar/execute` in its HTTP command
   reference but `/software/execute` in its sample page. Sky Tonight uses the
   former; if commands fail with HTTP 404, change `EXECUTE_PATH` in
