@@ -490,18 +490,38 @@ function renderPlan() {
     );
 }
 
-// Syncs the dome to the planner's current date/location once, then adds every
-// favorite that's in Digistar's object library and above the horizon that
-// day. There's no single correct dome "date" for a batch of objects that
-// each rise at a different time, so unlike the per-object Show on dome
-// button, this doesn't sync to each favorite's own rise time.
+// How far before the earliest favorite's set time to sync the dome - just enough
+// that it's unambiguously still above the horizon at sync time, not exactly at the
+// boundary.
+const DOME_SYNC_BEFORE_SET_MS = 60 * 1000;
+
+// Syncs the dome once, then adds every favorite that's in Digistar's object library
+// and above the horizon that day. There's no single correct dome "date" for a batch
+// of objects that each rise at a different time, so unlike the per-object Show on
+// dome button (which syncs to that one object's own next rise), this syncs to a
+// moment just before the *earliest* of them sets - late enough that as many
+// favorites as possible are already up, but before any of them have set again.
+// Circumpolar favorites (no set time that day) don't constrain this; if none of the
+// favorites have a real set time, there's nothing to anchor to, so this falls back
+// to the planner's selected date.
 async function addAllFavoritesToDome() {
     const favorites = getFavorites()
         .map(f => objectFromFavorite(f, state.date))
         .filter(Boolean);
 
+    const visibility = favorites.map((object) => {
+        const { transitTime, setTime } = object.getVisibilityWindow(state.location, state.date);
+        const apexBelowHorizon = transitTime ? false : !object.isVisibleAt(state.location, state.date);
+        return { object, apexBelowHorizon, setTime };
+    });
+
+    const setTimesMs = visibility.map((v) => v.setTime?.getTime()).filter((t) => t != null);
+    const syncDate = setTimesMs.length > 0
+        ? new Date(Math.min(...setTimesMs) - DOME_SYNC_BEFORE_SET_MS)
+        : state.date;
+
     await syncDomeSky({
-        date: state.date,
+        date: syncDate,
         lat: state.location?.latitude,
         lon: state.location?.longitude,
         locationLabel: state.location?.label,
@@ -509,9 +529,7 @@ async function addAllFavoritesToDome() {
 
     let added = 0;
     const skipped = [];
-    for (const object of favorites) {
-        const { transitTime } = object.getVisibilityWindow(state.location, state.date);
-        const apexBelowHorizon = transitTime ? false : !object.isVisibleAt(state.location, state.date);
+    for (const { object, apexBelowHorizon } of visibility) {
         try {
             await addObjectToDome({
                 name: object.name,

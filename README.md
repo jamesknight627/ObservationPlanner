@@ -399,13 +399,18 @@ since Digistar string arguments are double-quoted.
 ### Adding every favorite to the dome
 
 The Saved Objects tab's **Add all to dome** button (`addAllFavoritesToDome()`
-in `js/app.js`) syncs the dome's location/date *once*, to the planner's
-currently selected date — there's no single correct dome date for a batch of
-objects that each rise at a different time, unlike the per-object button,
-which syncs to that one object's own next rise. It then adds every favorite
-that's both in Digistar's object library and above the horizon that day,
-skipping the rest, and reports a one-line summary such as "Added 3
-favorites; skipped 2 (NGC1234, Never Rises)."
+in `js/app.js`) syncs the dome's location/date *once*, to a moment one
+minute before the *earliest* of the favorites sets — there's no single
+correct dome date for a batch of objects that each rise at a different time,
+unlike the per-object button (which syncs to that one object's own next
+rise), but syncing just before the first one sets means as many favorites as
+possible are already above the horizon without risking landing after one of
+them has set. Circumpolar favorites don't constrain this (they have no set
+time that day); if none of the favorites have one, this falls back to the
+planner's selected date. It then adds every favorite that's both in
+Digistar's object library and above the horizon that day, skipping the
+rest, and reports a one-line summary such as "Added 3 favorites; skipped 2
+(NGC1234, Never Rises)."
 
 This is built on two pieces `js/digistar.js` exports for exactly this split:
 `syncDomeSky()` (the location/date/label sync alone) and `addObjectToDome()`
