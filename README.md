@@ -495,11 +495,27 @@ commands (the flag still thinks they exist) until a reset forces it. See
   Digistar's browser that property is simply unrecognized and ignored -
   leaving those elements with no actual top/right/bottom/left, so they
   collapsed instead of filling their container. Fixed by spelling out
-  `top`/`right`/`bottom`/`left` individually instead. Keep this in mind
-  (both the JS and CSS side) when making changes - test newer-looking
-  properties against [caniuse.com](https://caniuse.com) for Chrome 84 support
-  before relying on them, since this sandbox can't run Digistar's actual
-  browser to catch it directly.
+  `top`/`right`/`bottom`/`left` individually instead. There's also a font
+  angle, confirmed as a second real bug on real hardware: a handful of
+  arrow characters (`←`/`→`, from the "Arrows" Unicode block, U+2190/U+2192)
+  used for things like the Prev/Next buttons and "Back to planner" links
+  rendered as garbled text, most likely because Digistar's embedded
+  environment doesn't ship a font with glyphs for that block - unlike
+  common Latin-1 Supplement characters (`°`, `×`, …) which are virtually
+  guaranteed to render anywhere. Fixed by using plain ASCII (`<`/`>`)
+  instead of Unicode arrow glyphs for navigation. If another decorative
+  Unicode character (★, ↺, ‹, ›, em/en dashes, prime marks, …) turns up
+  broken on the dome too, the same fix applies: replace it with an
+  ASCII-safe equivalent rather than trying to fix the encoding, since the
+  declared charset was already correct (confirmed: `<meta charset="UTF-8">`
+  is the first thing in every page's `<head>`) - this looks like missing
+  font glyphs, not a mis-declared encoding.
+  Keep this in mind (JS, CSS, *and* which characters you type into user-
+  facing text) when making changes - test newer-looking CSS properties
+  against [caniuse.com](https://caniuse.com) for Chrome 84 support, and
+  prefer plain ASCII for anything Digistar's embedded browser will render,
+  since this sandbox can't run Digistar's actual browser to catch either
+  kind of problem directly.
 - The Digistar User's Guide uses `/digistar/execute` in its HTTP command
   reference but `/software/execute` in its sample page. Sky Tonight uses the
   former; if commands fail with HTTP 404, change `EXECUTE_PATH` in

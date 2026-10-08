@@ -74,7 +74,7 @@ function render(object, { visibility, location, summary }) {
         : '<p class="empty-state">No description available.</p>';
 
     const wikiLink = summary?.pageUrl
-        ? `<a href="${summary.pageUrl}" target="_blank" rel="noopener">View on Wikipedia →</a>`
+        ? `<a href="${summary.pageUrl}" target="_blank" rel="noopener">View on Wikipedia &gt;</a>`
         : '';
 
     const nameRow = object.properName

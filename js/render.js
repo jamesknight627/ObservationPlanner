@@ -103,7 +103,7 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
             <dt>Transit duration</dt><dd>${formatDuration(durationMs)}</dd>
             ${renderPhysicalFactRows(object)}
         </dl>
-        <a class="detail-panel__more" href="${buildDetailUrl(object, location, date)}">More details →</a>
+        <a class="detail-panel__more" href="${buildDetailUrl(object, location, date)}">More details &gt;</a>
     `;
     panel.classList.add('is-open');
     panel.querySelector('.detail-panel__close')?.addEventListener('click', () => {
