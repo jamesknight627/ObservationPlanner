@@ -18,6 +18,7 @@ import {
     clearPlanOverride,
 } from './storage.js';
 import { geocodeLocation } from './geocode.js';
+import { initFontSizeControls } from './fontSize.js';
 import { TYPE_LABELS, SOLAR_SYSTEM_TYPE_LABELS } from './typeLabels.js';
 import { isDomeAvailable, syncDomeSky, addObjectToDome, resetAllDome } from './digistar.js';
 
@@ -733,6 +734,7 @@ dateInputEl?.addEventListener('change', () => {
     renderPlan();
 });
 
+initFontSizeControls();
 loadResults();
 renderFavorites();
 renderPlan();

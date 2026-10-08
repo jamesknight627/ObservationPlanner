@@ -71,6 +71,23 @@ body {
     color: var(--text-muted);
 }
 
+/* Site-wide text size (see js/fontSize.js) - scales the root font size, so every
+   rem-based size elsewhere in this file grows or shrinks along with it. */
+.font-size-controls {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.font-size-controls button {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+#font-size-decrease {
+    font-size: 0.7rem;
+}
+
 input,
 button {
     font: inherit;

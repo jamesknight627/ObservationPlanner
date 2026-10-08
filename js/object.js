@@ -16,6 +16,9 @@ import {
     formatBortle,
 } from './format.js';
 import { getTypeLabel } from './typeLabels.js';
+import { initFontSizeControls } from './fontSize.js';
+
+initFontSizeControls();
 
 const DEFAULT_LOCATION = { latitude: 40.7128, longitude: -74.006, label: 'New York, NY' };
 

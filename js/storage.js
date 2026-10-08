@@ -2,6 +2,7 @@ const FAVORITES_KEY = 'astro-planner:favorites';
 const LOCATION_KEY = 'astro-planner:last-location';
 const DATE_KEY = 'astro-planner:last-date';
 const PLAN_OVERRIDES_KEY = 'astro-planner:plan-overrides';
+const FONT_SCALE_KEY = 'astro-planner:font-scale';
 
 export function getFavorites() {
     return JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? '[]');
@@ -67,4 +68,17 @@ export function clearPlanOverride(dateKey, objectKey) {
     delete all[dateKey][objectKey];
     if (Object.keys(all[dateKey]).length === 0) delete all[dateKey];
     localStorage.setItem(PLAN_OVERRIDES_KEY, JSON.stringify(all));
+}
+
+// Site-wide text size, as a multiplier of the browser default (1 = 100%). Shared
+// across every page via the same key, so a change made on one carries over to the
+// others.
+export function getFontScale() {
+    const raw = localStorage.getItem(FONT_SCALE_KEY);
+    const scale = raw ? Number(raw) : 1;
+    return Number.isFinite(scale) ? scale : 1;
+}
+
+export function setFontScale(scale) {
+    localStorage.setItem(FONT_SCALE_KEY, String(scale));
 }

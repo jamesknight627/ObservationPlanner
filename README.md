@@ -59,6 +59,11 @@ marker and label, with one click.
   its detail panel, same as a result card.
 - **Persisted session** — last-used location and date are remembered between
   visits.
+- **Text size controls** — the A-/A+ buttons in the header (on the planner and
+  object detail pages) scale the whole page's text up or down, 10% per click
+  between 80% and 160% of the default. The setting is shared across pages via
+  `localStorage` (`js/fontSize.js`), so it carries over whichever page is
+  opened next.
 - **Planetarium dome control (Digistar 7)** — when the site is served by
   Digistar's built-in web server, the detail panel gains **Show on dome** and
   **Reset dome view** buttons. Show on dome sets the dome's sky to the
