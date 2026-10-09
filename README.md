@@ -274,6 +274,24 @@ given location and time (standard spherical trig), then derives:
   around the meridian (time from rise to transit equals time from transit to
   set).
 - **Max altitude** — the altitude at the transit moment.
+- **Sunset, sunrise, and civil dusk/dawn** (the Plan tab's twilight lines) —
+  the Sun's altitude is scanned the same way, in 5-minute steps across the
+  timeline, recording the moment it first crosses −0.833° (sunset/sunrise,
+  accounting for atmospheric refraction and the Sun's apparent radius) and
+  −6° (civil twilight). See `findSunMarks()` in `js/app.js`.
+
+Every displayed time is shown in the **observing location's** approximate
+local time, not the viewing device's own system timezone - otherwise picking
+a location far from wherever the device's clock is set (a common case on
+Digistar, and when testing far-off locations like Australia from elsewhere)
+would show correct underlying times translated into the wrong timezone,
+turning an evening sunset into something like "3 AM". Since there's no
+timezone lookup, this is approximated from longitude as a fixed whole-hour
+UTC offset (one 15°-wide slice per hour, via `Etc/GMT` in
+`timeZoneForLongitude()`, `js/format.js`) - it can be off by up to roughly an
+hour near a timezone boundary or during DST, which is an acceptable tradeoff
+for an observing-planning estimate, consistent with the rest of the app's
+approximate ephemeris.
 
 Planets are different: they move against the stars, so the solar-system
 dataset has no RA/Dec at all. `ephemeris.js` computes their positions from
@@ -488,6 +506,11 @@ commands (the flag still thinks they exist) until a reset forces it. See
   this simple orbital model.
 - "Visible now" means above the horizon, not "the sky is dark," so a planet
   can count as visible during daytime.
+- Displayed times are shown in the observing location's *approximate* local
+  time - a fixed whole-hour UTC offset estimated from longitude, not a real
+  timezone/DST lookup (see [How the astronomy works](#how-the-astronomy-works)).
+  It can be off by up to roughly an hour near a timezone boundary or during
+  DST.
 - The Messier common-name table and Wikipedia lookups only reliably cover
   well-known objects; obscure NGC/IC/PGC entries usually won't have a photo or
   common name available.

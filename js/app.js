@@ -512,7 +512,7 @@ function renderPlan() {
 
     renderScheduler(
         planListEl,
-        { timelineStart, timelineEnd, entries: visibleEntries, notVisibleObjects: notVisible, sunMarks },
+        { timelineStart, timelineEnd, entries: visibleEntries, notVisibleObjects: notVisible, sunMarks, location: state.location },
         {
             onSelect: handleSelectObject,
             onTimesChange: (entry, start, end) => {

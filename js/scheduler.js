@@ -259,7 +259,7 @@ function hourMarks(timelineStart, timelineEnd) {
 // labeled with a time - the same convention as minor/major ticks on a ruler.
 const MAX_LABELED_TICKS = 10;
 
-function renderRuler(timelineStart, timelineEnd) {
+function renderRuler(timelineStart, timelineEnd, longitude) {
     const ruler = document.createElement('div');
     ruler.className = 'scheduler__ruler';
 
@@ -285,7 +285,7 @@ function renderRuler(timelineStart, timelineEnd) {
             tick.classList.add('scheduler__tick--labeled');
             const label = document.createElement('span');
             label.className = 'scheduler__tick-label';
-            label.textContent = formatClockTime(new Date(t));
+            label.textContent = formatClockTime(new Date(t), longitude);
             tick.appendChild(label);
         }
 
@@ -418,7 +418,7 @@ function renderLegend() {
 // below. Lives in its own fixed-height track (rather than floating labels up from the
 // lines themselves) so two close-together flags (e.g. sunset and civil dusk) can stack
 // into tiers without ever growing past their reserved space into the page above.
-function renderSunLabelsRow(timelineStart, timelineEnd, sunMarks) {
+function renderSunLabelsRow(timelineStart, timelineEnd, sunMarks, longitude) {
     const row = document.createElement('div');
     row.className = 'scheduler__sun-labels';
 
@@ -438,7 +438,7 @@ function renderSunLabelsRow(timelineStart, timelineEnd, sunMarks) {
         const flag = document.createElement('span');
         flag.className = `scheduler__sun-mark-label scheduler__sun-mark-label--${kind} scheduler__sun-mark-label--tier${tier}`;
         flag.style.left = `${pct(time.getTime(), startMs, endMs)}%`;
-        flag.textContent = `${label} ${formatClockTime(time)}`;
+        flag.textContent = `${label} ${formatClockTime(time, longitude)}`;
         track.appendChild(flag);
     }
 
@@ -446,7 +446,7 @@ function renderSunLabelsRow(timelineStart, timelineEnd, sunMarks) {
     return row;
 }
 
-function renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMarks) {
+function renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMarks, longitude) {
     const row = document.createElement('li');
     row.className = 'scheduler__row';
 
@@ -501,7 +501,7 @@ function renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMark
         positionBar(bar, start, end, timelineStart, timelineEnd);
         const midpointMs = (start.getTime() + end.getTime()) / 2;
         barLabel.style.left = `${pct(midpointMs, timelineStart.getTime(), timelineEnd.getTime())}%`;
-        barLabel.textContent = `${formatClockTime(start)}–${formatClockTime(end)}`;
+        barLabel.textContent = `${formatClockTime(start, longitude)}–${formatClockTime(end, longitude)}`;
         resetBtn.hidden = !isOverridden(entry);
     }
     applyTimes(entry.start, entry.end);
@@ -559,20 +559,24 @@ function renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMark
 // at evenly-spaced points across the whole timeline, plotted as the track's background.
 // `sunMarks` (optional) is { sunset, duskCivil, dawnCivil, sunrise }, each a Date or null
 // (see findSunMarks() in js/app.js) - drawn as vertical lines through every row.
-export function renderScheduler(container, { timelineStart, timelineEnd, entries, notVisibleObjects, sunMarks }, handlers, emptyMessage) {
+// `location` (optional) is the observing location - its longitude is used to show every
+// time on this timeline in that location's approximate local time rather than the
+// viewing device's own (see formatClockTime() in js/format.js).
+export function renderScheduler(container, { timelineStart, timelineEnd, entries, notVisibleObjects, sunMarks, location }, handlers, emptyMessage) {
     container.innerHTML = '';
     if (entries.length === 0 && notVisibleObjects.length === 0) {
         container.innerHTML = `<p class="empty-state">${emptyMessage}</p>`;
         return;
     }
 
+    const longitude = location?.longitude;
     const scheduler = document.createElement('div');
     scheduler.className = 'scheduler';
     const hasSunMarks = hasAnySunMark(sunMarks);
     if (hasSunMarks) {
-        scheduler.appendChild(renderSunLabelsRow(timelineStart, timelineEnd, sunMarks));
+        scheduler.appendChild(renderSunLabelsRow(timelineStart, timelineEnd, sunMarks, longitude));
     }
-    scheduler.appendChild(renderRuler(timelineStart, timelineEnd));
+    scheduler.appendChild(renderRuler(timelineStart, timelineEnd, longitude));
     // Spans the *whole* scheduler (appended here, not inside the body below), so each
     // line visibly runs from its flag at the top down through the ruler, the gaps
     // between rows, and - via the matching spans renderRow() adds to each row's own
@@ -594,7 +598,7 @@ export function renderScheduler(container, { timelineStart, timelineEnd, entries
         const rows = document.createElement('ol');
         rows.className = 'scheduler__rows';
         for (const entry of entries) {
-            rows.appendChild(renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMarks));
+            rows.appendChild(renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMarks, longitude));
         }
         body.appendChild(rows);
 

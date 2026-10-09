@@ -100,10 +100,10 @@ function render(object, { visibility, location, summary }) {
                     <dt>Angular size</dt><dd>${formatAngularSize(object.angularSize)}</dd>
                     <dt>RA / Dec</dt><dd>${formatRaHours(object.raDeg)} / ${formatDecDegrees(object.decDeg)}</dd>
                     <dt>Location</dt><dd>${location.label ?? formatCoords(location)}</dd>
-                    <dt>Next rise</dt><dd>${formatTime(riseTime)}</dd>
-                    <dt>Time at apex</dt><dd>${formatTime(transitTime)}</dd>
+                    <dt>Next rise</dt><dd>${formatTime(riseTime, location?.longitude)}</dd>
+                    <dt>Time at apex</dt><dd>${formatTime(transitTime, location?.longitude)}</dd>
                     <dt>Max altitude</dt><dd>${formatAltitude(maxAltitudeDeg)}</dd>
-                    <dt>Sets at</dt><dd>${formatTime(setTime)}</dd>
+                    <dt>Sets at</dt><dd>${formatTime(setTime, location?.longitude)}</dd>
                     <dt>Transit duration</dt><dd>${formatDuration(durationMs)}</dd>
                     ${renderPhysicalFactRows(object)}
                 </dl>

@@ -6,14 +6,36 @@ export function formatDuration(ms) {
     return `${hours}h ${minutes}m`;
 }
 
-export function formatTime(date) {
-    return date ? date.toLocaleString() : 'unknown';
+// Approximates the IANA zone for a longitude as a fixed whole-hour UTC offset (one
+// 15-degree slice per hour), so times can be shown in roughly the *observing location's*
+// local time instead of the viewing device's own system timezone - which otherwise can
+// be wildly different (e.g. picking an Australian location from a US-timezone device
+// shows every rise/set/sunset time shifted by most of a day). This has no notion of
+// real timezone/DST boundaries, so it can be off by up to an hour or so near a zone
+// edge or during DST - acceptable for an observing-planning estimate, same tradeoff as
+// the app's already-approximate ephemeris. `Etc/GMT` zones use an inverted sign
+// (Etc/GMT-5 is UTC+5), and only support whole-hour, integer offsets from -14 to +12.
+function timeZoneForLongitude(longitude) {
+    if (typeof longitude !== 'number' || Number.isNaN(longitude)) return undefined;
+    const offset = Math.max(-12, Math.min(14, Math.round(longitude / 15)));
+    if (offset === 0) return 'Etc/GMT';
+    return offset > 0 ? `Etc/GMT-${offset}` : `Etc/GMT+${-offset}`;
+}
+
+// `longitude` is the observing location's, not the viewer's - pass it whenever the date
+// being shown is tied to a specific location (rise/set times, sun marks, scheduler bars)
+// so the clock reads correctly there. Omit it (e.g. for a date with no location context)
+// to fall back to the viewing device's own local time, same as before this existed.
+export function formatTime(date, longitude) {
+    return date ? date.toLocaleString(undefined, { timeZone: timeZoneForLongitude(longitude) }) : 'unknown';
 }
 
 // Just the clock time (e.g. "9:45 PM"), for compact labels like the scheduler's
 // ruler ticks and bar labels where the full date would be redundant/too wide.
-export function formatClockTime(date) {
-    return date ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' }) : '—';
+export function formatClockTime(date, longitude) {
+    return date
+        ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone: timeZoneForLongitude(longitude) })
+        : '—';
 }
 
 // Formats RA as sexagesimal hr:min:sec.s (e.g. "05:35:17.2"). Rounds to the nearest
