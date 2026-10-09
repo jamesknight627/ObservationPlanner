@@ -25,7 +25,7 @@ const numberOrNull = (value) => (typeof value === 'number' && Number.isFinite(va
 
 // A planet (or the Sun, or Pluto). Unlike a deep-sky object its position, brightness, and
 // apparent size change from day to day, so they're computed from the date rather than read
-// from the dataset. Everything else - rise/transit/set, "visible now", favorites - is
+// from the dataset. Everything else - rise/transit/set, visibility checks, favorites - is
 // inherited from CelestialObject unchanged.
 export class SolarSystemBody extends CelestialObject {
     // Returns null for dataset records the app can't place in the sky (e.g. Earth).

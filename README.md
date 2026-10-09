@@ -18,7 +18,7 @@ marker and label, with one click.
   preview on a dome), linked from the header. Deliberately brief; this
   README is where the detail lives.
 - **Observation planner** — browse the Messier catalog, the full ~227k-object
-  deep-sky database, or the Solar System (the Sun, planets, and Pluto), filtered by date/location, type, magnitude, "visible now," peak
+  deep-sky database, or the Solar System (the Sun, planets, and Pluto), filtered by date/location, type, magnitude, peak
   altitude, a time-at-apex window, and an "up between" window, paginated 20
   at a time. "Up between" has an "Altitude above" filter paired with it
   (only usable once both window times are set) that finds objects above a
@@ -493,19 +493,21 @@ commands (the flag still thinks they exist) until a reset forces it. See
 - The observing-guide numbers are estimates from magnitude/size alone — they
   don't account for surface brightness, so small-but-bright objects (like the
   Ring Nebula) can get an optimistic equipment recommendation.
-- "Visible now" and "apex between" filters can only be evaluated per-object
-  (the API has no concept of horizon altitude), so they run against a capped
-  batch of 100 server-side matches rather than the entire matching set. On the
-  Messier catalog this covers everything; on "all catalogs" with a broad
-  filter, a small number of qualifying objects outside that batch could be
-  missed.
+- The "peaks above," "apex between," "up between," and "altitude above"
+  filters can only be evaluated per-object (the API has no concept of
+  horizon altitude), so they run against a capped batch of 100 server-side
+  matches rather than the entire matching set. On the Messier catalog this
+  covers everything; on "all catalogs" with a broad filter, a small number
+  of qualifying objects outside that batch could be missed.
 - Planet positions ignore precession, nutation, and light-time (like the
   deep-sky coordinates, they're J2000), and Saturn's magnitude ignores its
   rings, so it can read up to ~1 mag dimmer than reality. The Moon isn't
   included: it isn't in the solar-system dataset, and it moves too fast for
   this simple orbital model.
-- "Visible now" means above the horizon, not "the sky is dark," so a planet
-  can count as visible during daytime.
+- The time-window filters ("apex between," "up between") only check whether
+  an object is above the horizon during that window, not whether the sky is
+  actually dark then, so a planet can match a daytime window just as easily
+  as a nighttime one.
 - Displayed times are shown in the observing location's *approximate* local
   time - a fixed whole-hour UTC offset estimated from longitude, not a real
   timezone/DST lookup (see [How the astronomy works](#how-the-astronomy-works)).

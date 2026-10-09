@@ -46,7 +46,6 @@ const filtersBarEl = document.querySelector('#filters-bar');
 const datasetFilterEl = document.querySelector('#dataset-filter');
 const typeFilterEl = document.querySelector('#type-filter');
 const magnitudeFilterEl = document.querySelector('#magnitude-filter');
-const visibleFilterEl = document.querySelector('#visible-filter');
 const altitudeFilterEl = document.querySelector('#altitude-filter');
 const apexStartFilterEl = document.querySelector('#apex-start-filter');
 const apexEndFilterEl = document.querySelector('#apex-end-filter');
@@ -57,9 +56,9 @@ const clearFiltersBtn = document.querySelector('#clear-filters');
 
 const PAGE_SIZE = 20;
 // Type/magnitude filters run server-side (in the API's `where` clause) so pagination stays
-// exact. "Visible now" and "apex between" can only be evaluated per-object with real math the
-// API doesn't know about, so those run client-side against a larger fetched batch, capped at
-// the API's own per-request max.
+// exact. "Apex between" and the other time-window filters can only be evaluated per-object
+// with real math the API doesn't know about, so those run client-side against a larger
+// fetched batch, capped at the API's own per-request max.
 const CLIENT_FILTER_FETCH_LIMIT = 100;
 
 // Which catalog the planner browses/searches: 'messier', 'deepSky' (all ~227k deep-sky
@@ -94,7 +93,6 @@ const state = {
         catalogScope: DEFAULT_CATALOG_SCOPE,
         type: '',
         maxMagnitude: null,
-        visibleOnly: false,
         minMaxAltitude: null,
         apexStart: '',
         apexEnd: '',
@@ -135,7 +133,6 @@ function isSolarSystemScope() {
 
 function hasClientFilters() {
     return (
-        state.filters.visibleOnly ||
         state.filters.minMaxAltitude != null ||
         (state.filters.apexStart && state.filters.apexEnd) ||
         (state.filters.windowStart && state.filters.windowEnd)
@@ -227,8 +224,7 @@ function getMaxAltitudeInWindow(object, location, date, startStr, endStr) {
 }
 
 function matchesClientFilters(object) {
-    const { visibleOnly, minMaxAltitude, apexStart, apexEnd, windowStart, windowEnd, minAltitudeInWindow } = state.filters;
-    if (visibleOnly && !object.isVisibleAt(state.location, state.date)) return false;
+    const { minMaxAltitude, apexStart, apexEnd, windowStart, windowEnd, minAltitudeInWindow } = state.filters;
     if (minMaxAltitude != null) {
         const maxAltitude = object.getMaxAltitude(state.location, state.date);
         if (maxAltitude == null || maxAltitude < minMaxAltitude) return false;
@@ -633,11 +629,6 @@ magnitudeFilterEl?.addEventListener('change', () => {
     refreshResults();
 });
 
-visibleFilterEl?.addEventListener('change', () => {
-    state.filters.visibleOnly = visibleFilterEl.checked;
-    refreshResults();
-});
-
 altitudeFilterEl?.addEventListener('change', () => {
     const value = altitudeFilterEl.value.trim();
     state.filters.minMaxAltitude = value === '' ? null : Number(value);
@@ -727,7 +718,6 @@ clearFiltersBtn?.addEventListener('click', () => {
         catalogScope: DEFAULT_CATALOG_SCOPE,
         type: '',
         maxMagnitude: null,
-        visibleOnly: false,
         minMaxAltitude: null,
         apexStart: '',
         apexEnd: '',
@@ -738,7 +728,6 @@ clearFiltersBtn?.addEventListener('click', () => {
     if (datasetFilterEl) datasetFilterEl.value = DEFAULT_CATALOG_SCOPE;
     populateTypeOptions(DEFAULT_CATALOG_SCOPE);
     if (magnitudeFilterEl) magnitudeFilterEl.value = '';
-    if (visibleFilterEl) visibleFilterEl.checked = false;
     if (altitudeFilterEl) altitudeFilterEl.value = '';
     if (apexStartFilterEl) apexStartFilterEl.value = '';
     if (apexEndFilterEl) apexEndFilterEl.value = '';

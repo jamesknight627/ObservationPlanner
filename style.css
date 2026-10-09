@@ -168,12 +168,6 @@ button:focus-visible {
     gap: 0.25rem;
 }
 
-.filters__checkbox {
-    flex-direction: row !important;
-    align-items: center;
-    gap: 0.4rem !important;
-}
-
 .filters input[type="number"] {
     width: 5rem;
 }
