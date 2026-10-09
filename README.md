@@ -45,9 +45,16 @@ marker and label, with one click.
   the selected date: each favorite that's up that night gets its own row on
   a shared timeline, as a bar spanning its natural rise-to-set window. Drag
   either edge of a bar (or use the arrow keys when it's focused) to narrow
-  or shift that object's observing window — the original rise/set span
-  stays visible behind the bar as a grayed "ghost," and a reset button
-  appears on any row you've adjusted. Each row's track is also plotted with
+  or shift that object's observing window; drag the middle of a bar (or use
+  the arrow keys when the bar itself, not an edge, is focused) to move the
+  whole window instead, keeping its duration fixed while its start and end
+  both shift together. Either way, the dragged edge snaps to another row's
+  current start or end time when it's dragged close to one — pointer drags
+  snap within a small pixel radius of the target, and keyboard nudges within
+  a fixed time radius, since there's no cursor position to derive a pixel
+  radius from — making it easy to line two objects up back-to-back. The
+  original rise/set span stays visible behind the bar as a grayed "ghost,"
+  and a reset button appears on any row you've adjusted. Each row's track is also plotted with
   that object's altitude over the course of the timeline, on a fixed
   fixed -20°-to-90° scale shared by every row, so how tall a curve stands
   is directly comparable from one object to the next - not just how high
@@ -203,7 +210,7 @@ js/
   howto.js                 How To page controller (just wires up the text-size buttons)
   fontSize.js              Site-wide text size controls, shared across every page
   render.js               DOM rendering for cards, lists, and the detail panel
-  scheduler.js             Plan tab's draggable timeline (rendering + resize interactions)
+  scheduler.js             Plan tab's draggable timeline (rendering, resize/move/snap interactions)
   digistar.js             Digistar dome control: builds and sends commands, dome buttons
   storage.js               localStorage helpers (favorites, last location/date, plan overrides)
   geocode.js               Place-name -> lat/lon via OpenStreetMap Nominatim

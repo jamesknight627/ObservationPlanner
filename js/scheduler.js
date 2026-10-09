@@ -13,6 +13,44 @@ function snapToMinutes(ms, minutes) {
     return Math.round(ms / step) * step;
 }
 
+// Pixel/time "magnetism" for aligning a dragged edge with another row's current
+// start/end - makes it easy to line two objects up back-to-back. Pointer drags use a
+// pixel radius (so it feels the same regardless of zoom level); keyboard nudges use a
+// fixed time radius instead, since there's no cursor position to derive a pixel radius
+// from.
+const SNAP_TO_WINDOW_PIXEL_RADIUS = 8;
+const SNAP_TO_WINDOW_KEYBOARD_MINUTES = 10;
+
+// Every other row's current start/end, in ms - the targets a dragged edge can snap to.
+// Recomputed on every call rather than cached, since other rows' entries mutate in
+// place as they're dragged, so this always reflects their live positions, not whatever
+// they were when this row was first rendered.
+function getSnapTargetsMs(entry, entries) {
+    const targets = [];
+    for (const other of entries) {
+        if (other === entry) continue;
+        targets.push(other.start.getTime(), other.end.getTime());
+    }
+    return targets;
+}
+
+// Snaps `ms` to the closest value in `targetsMs` if one is within `thresholdMs` of it;
+// otherwise falls back to the plain SNAP_MINUTES grid, same as before snapping to
+// other windows existed.
+function snapToNearestEdge(ms, targetsMs, thresholdMs) {
+    let closest = null;
+    let closestDist = Infinity;
+    for (const t of targetsMs) {
+        const dist = Math.abs(ms - t);
+        if (dist < closestDist) {
+            closestDist = dist;
+            closest = t;
+        }
+    }
+    if (closest != null && closestDist <= thresholdMs) return closest;
+    return snapToMinutes(ms, SNAP_MINUTES);
+}
+
 function positionBar(el, start, end, timelineStart, timelineEnd) {
     const startMs = timelineStart.getTime();
     const endMs = timelineEnd.getTime();
@@ -76,8 +114,10 @@ function isOverridden(entry) {
 
 // Wires up drag-to-resize (pointer) and arrow-key (keyboard) adjustment for one edge
 // of a bar. `isStart` picks which edge this handle owns; the other edge (read via
-// getStart/getEnd) is the clamp boundary, kept at least MIN_SLOT_MINUTES away.
-function attachHandleInteractions(handle, track, timelineStart, timelineEnd, { getStart, getEnd, isStart, onPreview, onCommit }) {
+// getStart/getEnd) is the clamp boundary, kept at least MIN_SLOT_MINUTES away. The
+// moved edge snaps to another row's current start/end when it's dragged close to one
+// (see snapToNearestEdge), falling back to the plain time grid otherwise.
+function attachHandleInteractions(handle, track, timelineStart, timelineEnd, { getStart, getEnd, isStart, entry, entries, onPreview, onCommit }) {
     const spanMs = timelineEnd.getTime() - timelineStart.getTime();
     const minGapMs = MIN_SLOT_MINUTES * 60000;
 
@@ -87,24 +127,27 @@ function attachHandleInteractions(handle, track, timelineStart, timelineEnd, { g
         return Math.min(Math.max(limited, timelineStart.getTime()), timelineEnd.getTime());
     }
 
-    function msFromClientX(clientX, rect) {
+    function snappedMsFromClientX(clientX, rect) {
         const fraction = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-        return snapToMinutes(timelineStart.getTime() + fraction * spanMs, SNAP_MINUTES);
+        const rawMs = timelineStart.getTime() + fraction * spanMs;
+        const thresholdMs = SNAP_TO_WINDOW_PIXEL_RADIUS * (spanMs / rect.width);
+        return snapToNearestEdge(rawMs, getSnapTargetsMs(entry, entries), thresholdMs);
     }
 
     handle.addEventListener('pointerdown', (e) => {
         e.preventDefault();
+        e.stopPropagation(); // don't also trigger the bar's own whole-window drag
         handle.setPointerCapture(e.pointerId);
         const rect = track.getBoundingClientRect();
 
         function onMove(ev) {
-            onPreview(new Date(clamp(msFromClientX(ev.clientX, rect))));
+            onPreview(new Date(clamp(snappedMsFromClientX(ev.clientX, rect))));
         }
         function onUp(ev) {
             document.removeEventListener('pointermove', onMove);
             document.removeEventListener('pointerup', onUp);
             handle.releasePointerCapture(e.pointerId);
-            onCommit(new Date(clamp(msFromClientX(ev.clientX, rect))));
+            onCommit(new Date(clamp(snappedMsFromClientX(ev.clientX, rect))));
         }
         document.addEventListener('pointermove', onMove);
         document.addEventListener('pointerup', onUp);
@@ -116,9 +159,84 @@ function attachHandleInteractions(handle, track, timelineStart, timelineEnd, { g
         const stepMs = (e.shiftKey ? 30 : SNAP_MINUTES) * 60000;
         const deltaMs = e.key === 'ArrowRight' ? stepMs : -stepMs;
         const currentMs = (isStart ? getStart() : getEnd()).getTime();
-        const next = new Date(clamp(currentMs + deltaMs));
+        const rawMs = currentMs + deltaMs;
+        const thresholdMs = SNAP_TO_WINDOW_KEYBOARD_MINUTES * 60000;
+        const snapped = snapToNearestEdge(rawMs, getSnapTargetsMs(entry, entries), thresholdMs);
+        const next = new Date(clamp(snapped));
         onPreview(next);
         onCommit(next);
+    });
+}
+
+// Wires up drag-to-move (pointer) and arrow-key (keyboard) adjustment for a bar as a
+// whole - shifts both start and end together by the same amount, so a window's
+// duration never changes from a move the way it would from a handle resize. Tracks
+// the offset between the initial grab point and the window's start, so the bar shifts
+// by exactly how far the pointer moves rather than jumping to align an edge with the
+// cursor (which is the right behavior for a handle, but not for grabbing the middle).
+//
+// Snapping tries the dragged window's start *and* end against every other row's
+// current start/end (as candidate start positions, via snapToEdgeStartCandidates),
+// so it catches all four meaningful back-to-back alignments - this window starting or
+// ending flush with another's start or end - in one search.
+function snapToEdgeStartCandidates(rawStartMs, durationMs, targetsMs, thresholdMs) {
+    const candidates = targetsMs.flatMap((t) => [t, t - durationMs]);
+    return snapToNearestEdge(rawStartMs, candidates, thresholdMs);
+}
+
+function attachBarMoveInteraction(bar, track, timelineStart, timelineEnd, { getStart, getEnd, entry, entries, onPreview, onCommit }) {
+    const timelineStartMs = timelineStart.getTime();
+    const timelineEndMs = timelineEnd.getTime();
+    const spanMs = timelineEndMs - timelineStartMs;
+
+    function clampStart(startMs, durationMs) {
+        return Math.min(Math.max(startMs, timelineStartMs), timelineEndMs - durationMs);
+    }
+
+    bar.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        bar.setPointerCapture(e.pointerId);
+        const rect = track.getBoundingClientRect();
+        const durationMs = getEnd().getTime() - getStart().getTime();
+        const initialStartMs = getStart().getTime();
+        const grabClientX = e.clientX;
+        const thresholdMs = SNAP_TO_WINDOW_PIXEL_RADIUS * (spanMs / rect.width);
+
+        function startFromClientX(clientX) {
+            const deltaFraction = (clientX - grabClientX) / rect.width;
+            const rawStartMs = initialStartMs + deltaFraction * spanMs;
+            const targets = getSnapTargetsMs(entry, entries);
+            const snapped = snapToEdgeStartCandidates(rawStartMs, durationMs, targets, thresholdMs);
+            return clampStart(snapped, durationMs);
+        }
+
+        function onMove(ev) {
+            const startMs = startFromClientX(ev.clientX);
+            onPreview(new Date(startMs), new Date(startMs + durationMs));
+        }
+        function onUp(ev) {
+            document.removeEventListener('pointermove', onMove);
+            document.removeEventListener('pointerup', onUp);
+            bar.releasePointerCapture(e.pointerId);
+            const startMs = startFromClientX(ev.clientX);
+            onCommit(new Date(startMs), new Date(startMs + durationMs));
+        }
+        document.addEventListener('pointermove', onMove);
+        document.addEventListener('pointerup', onUp);
+    });
+
+    bar.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+        e.preventDefault();
+        const stepMs = (e.shiftKey ? 30 : SNAP_MINUTES) * 60000;
+        const deltaMs = e.key === 'ArrowRight' ? stepMs : -stepMs;
+        const durationMs = getEnd().getTime() - getStart().getTime();
+        const rawStartMs = getStart().getTime() + deltaMs;
+        const thresholdMs = SNAP_TO_WINDOW_KEYBOARD_MINUTES * 60000;
+        const targets = getSnapTargetsMs(entry, entries);
+        const startMs = clampStart(snapToEdgeStartCandidates(rawStartMs, durationMs, targets, thresholdMs), durationMs);
+        onPreview(new Date(startMs), new Date(startMs + durationMs));
+        onCommit(new Date(startMs), new Date(startMs + durationMs));
     });
 }
 
@@ -328,7 +446,7 @@ function renderSunLabelsRow(timelineStart, timelineEnd, sunMarks) {
     return row;
 }
 
-function renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks) {
+function renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMarks) {
     const row = document.createElement('li');
     row.className = 'scheduler__row';
 
@@ -347,6 +465,8 @@ function renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks) {
 
     const bar = document.createElement('div');
     bar.className = 'scheduler__bar';
+    bar.tabIndex = 0;
+    bar.setAttribute('aria-label', `Move observing window for ${entry.object.cardTitle}`);
 
     const startHandle = document.createElement('button');
     startHandle.type = 'button';
@@ -390,6 +510,8 @@ function renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks) {
         getStart: () => entry.start,
         getEnd: () => entry.end,
         isStart: true,
+        entry,
+        entries,
         onPreview: (t) => applyTimes(t, entry.end),
         onCommit: (t) => { applyTimes(t, entry.end); handlers.onTimesChange?.(entry, entry.start, entry.end); },
     });
@@ -397,8 +519,18 @@ function renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks) {
         getStart: () => entry.start,
         getEnd: () => entry.end,
         isStart: false,
+        entry,
+        entries,
         onPreview: (t) => applyTimes(entry.start, t),
         onCommit: (t) => { applyTimes(entry.start, t); handlers.onTimesChange?.(entry, entry.start, entry.end); },
+    });
+    attachBarMoveInteraction(bar, track, timelineStart, timelineEnd, {
+        getStart: () => entry.start,
+        getEnd: () => entry.end,
+        entry,
+        entries,
+        onPreview: (s, en) => applyTimes(s, en),
+        onCommit: (s, en) => { applyTimes(s, en); handlers.onTimesChange?.(entry, entry.start, entry.end); },
     });
 
     const content = document.createElement('div');
@@ -462,7 +594,7 @@ export function renderScheduler(container, { timelineStart, timelineEnd, entries
         const rows = document.createElement('ol');
         rows.className = 'scheduler__rows';
         for (const entry of entries) {
-            rows.appendChild(renderRow(entry, timelineStart, timelineEnd, handlers, sunMarks));
+            rows.appendChild(renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMarks));
         }
         body.appendChild(rows);
 
