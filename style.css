@@ -89,6 +89,7 @@ body {
 }
 
 input,
+select,
 button {
     font: inherit;
     border-radius: 6px;
@@ -99,6 +100,7 @@ button {
 }
 
 input:disabled,
+select:disabled,
 button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
