@@ -213,10 +213,11 @@ project should rely on for an ES-module web app.
 ### Packaging it
 
 1. In Digistar's Library, right-click and choose **Add Files to Library...**,
-   then add every file in this project (`index.html`, `object.html`,
-   `howto.html`, `check.html`, `style.css`, `README.md`, and every file under
-   `js/`). Digistar's automatic content-type detection won't know what to do
-   with most of these, and it can't follow the `import` chain inside
+   then add every file in this project *except* `README.md` (`index.html`,
+   `object.html`, `howto.html`, `check.html`, `style.css`, and every file
+   under `js/`) - see "Known risks to watch for" below for why `README.md`
+   is left out. Digistar's automatic content-type detection won't know what
+   to do with most of these, and it can't follow the `import` chain inside
    `js/app.js` to the modules it pulls in - expect to add each file
    individually rather than relying on auto-detection.
 2. Right-click the resulting item and choose **Share Item via Content
@@ -264,12 +265,14 @@ root-relative to reach Digistar's own web interface.
 
 ### Known risks to watch for
 
-- **`.css` support.** Digistar's documented list of extra file types a
-  package can include (`.html`, `.txt`, `.xml`, `.pdf`, `.js`, `.py`,
-  `.dscp`, `.dsws`) doesn't mention `.css`, even though `style.css` is
-  required. Confirm it can be added manually via the Advanced dialog's "add
-  file" control before relying on it; if not, the whole stylesheet would need
-  inlining into a `<style>` block in each HTML file instead.
+- **`.md` isn't supported.** Confirmed by trying it: `style.css` adds to a
+  package fine (despite not being in Digistar's documented list of extra
+  file types) but `README.md` can't be added at all. `.md` was never on that
+  documented list (`.html`, `.htm`, `.txt`, `.xml`, `.pdf`, `.js`, `.py`,
+  `.dscp`, `.dsws`) - `.txt` is, `.md` isn't. Leave `README.md` out of the
+  package; the How To page's link to it (`howto.html`) will 404 on an
+  installed copy as a result, until that link is changed to point somewhere
+  else (e.g. the GitHub repo) instead of the local file.
 
 ## Project structure
 
