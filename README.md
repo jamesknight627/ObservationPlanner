@@ -263,14 +263,16 @@ INSTALLATION (manual - this is a plain web app, not a native Digistar Library
 item, so Digistar's automatic path rewriting doesn't apply to it):
 
 1. After installing this package, find the downloaded files under
-   $Content\User\Downloads\<this item's name>\.
+   $Content\User\Downloads\<source site>\<this item's name>\ - both of
+   those folder names come from the shared package itself (the site that
+   shared it, and its Display Name), not anything chosen on this system.
 2. Confirm that folder directly contains index.html, object.html,
    howto.html, check.html, style.css, app.js, and object.js, all in that
    one folder (no subfolders).
-3. Open http://localhost/content/User/Downloads/<folder name>/check.html in
-   a browser on the Digistar Host (substitute the real folder name from step
-   1) to confirm Digistar's web interface is reachable and JavaScript files
-   are served correctly.
+3. Open http://localhost/content/User/Downloads/<source site>/<item
+   name>/check.html in a browser on the Digistar Host (substitute the real
+   folder names from step 1) to confirm Digistar's web interface is
+   reachable and JavaScript files are served correctly.
 4. For a fixed, predictable address instead of the downloads folder, move or
    copy the whole folder to $Content\User\SkyTonight\ and use
    http://localhost/content/User/SkyTonight/index.html.
