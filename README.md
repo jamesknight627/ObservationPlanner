@@ -270,9 +270,11 @@ root-relative to reach Digistar's own web interface.
   file types) but `README.md` can't be added at all. `.md` was never on that
   documented list (`.html`, `.htm`, `.txt`, `.xml`, `.pdf`, `.js`, `.py`,
   `.dscp`, `.dsws`) - `.txt` is, `.md` isn't. Leave `README.md` out of the
-  package; the How To page's link to it (`howto.html`) will 404 on an
-  installed copy as a result, until that link is changed to point somewhere
-  else (e.g. the GitHub repo) instead of the local file.
+  package. The How To page's "see the README" link points at the GitHub
+  repo rather than the local file for exactly this reason, so it keeps
+  working on an installed copy that doesn't have `README.md` bundled with
+  it (it just needs internet access, same as the catalog/geocoding/Wikipedia
+  lookups already do).
 
 ## Project structure
 
