@@ -205,28 +205,46 @@ Digistar's Cloud Library is built around specific, typed Library items - media
 Pages (`.dscp`)/Workspaces (`.dsws`). Sky Tonight doesn't fit any of those
 categories: it's a plain multi-file web app, not a native Digistar object. So
 rather than trying to force it into one of those types, share it as a generic
-**Content Package** containing every project file, with manual install
-instructions (below) in the package description - Digistar's own path
-rewriting is built for its native content types and isn't something this
-project should rely on for an ES-module web app.
+**Content Package** - but as a *bundled* copy, not the raw `js/` module
+sources. Digistar's packaging step doesn't handle ES module `import`
+statements correctly (confirmed by direct testing - see "Known risks to
+watch for" below), so the modules need to be bundled into plain,
+import-free scripts first.
 
 ### Packaging it
 
-1. In Digistar's Library, right-click and choose **Add Files to Library...**,
-   then add every file in this project *except* `README.md` (`index.html`,
-   `object.html`, `howto.html`, `check.html`, `style.css`, and every file
-   under `js/`) - see "Known risks to watch for" below for why `README.md`
-   is left out. Digistar's automatic content-type detection won't know what
-   to do with most of these, and it can't follow the `import` chain inside
-   `js/app.js` to the modules it pulls in - expect to add each file
-   individually rather than relying on auto-detection.
-2. Right-click the resulting item and choose **Share Item via Content
+1. Bundle the two entry-point scripts with [esbuild](https://esbuild.github.io/)
+   (no install needed, `npx` fetches it on first use):
+   ```bash
+   npx esbuild js/app.js --bundle --format=iife --outfile=dist/app.js
+   npx esbuild js/object.js --bundle --format=iife --outfile=dist/object.js
+   ```
+   This is the same bundling command already used as a fallback in "If the
+   setup check fails" above, for a different reason (Digistar mislabeling
+   `.js` files for module scripts). Here it also happens to produce exactly
+   what Cloud Library packaging needs: a single self-contained script per
+   page with no `import` statements left for Digistar to mishandle, and no
+   `js/` subfolder that needs to exist in the shared package at all.
+2. Make temporary copies of `index.html` and `object.html` with their
+   script tags pointed at the bundled files, loaded as plain scripts
+   instead of ES modules, sitting right next to the HTML (no subfolder):
+   - `index.html`: `<script type="module" src="js/app.js"></script>` →
+     `<script src="app.js" defer></script>`
+   - `object.html`: `<script type="module" src="js/object.js"></script>` →
+     `<script src="object.js" defer></script>`
+3. In Digistar's Library, right-click and choose **Add Files to Library...**,
+   then add: the two edited HTML files (as `index.html`/`object.html`),
+   `howto.html`, `check.html`, `style.css`, and the two bundled files from
+   `dist/` (renamed to sit at the top level: `app.js`, `object.js`). Leave
+   out `README.md` and everything under the original `js/` folder - see
+   "Known risks to watch for" below for why.
+4. Right-click the resulting item and choose **Share Item via Content
    Package** (safer than uploading straight to the live Cloud Library, since
    you get a file you can test yourself first) or **Share Item to Cloud
    Library** once you're confident it's right.
-3. Click **Advanced** and double-check the file list: every `.js` file under
-   `js/` needs to be present, not just `app.js`. Add any that are missing.
-4. Paste the description from the next section in as the package's
+5. Click **Advanced** and double-check the file list has both `app.js` and
+   `object.js`, not just one of them.
+6. Paste the description from the next section in as the package's
    description field, then **Share**/**Save**.
 
 ### Package description text
@@ -247,41 +265,43 @@ item, so Digistar's automatic path rewriting doesn't apply to it):
 1. After installing this package, find the downloaded files under
    $Content\User\Downloads\<this item's name>\.
 2. Confirm that folder directly contains index.html, object.html,
-   howto.html, check.html, style.css, and a subfolder with every .js file -
-   all in that one folder, not nested another level deeper.
-3. Digistar renames that .js subfolder to "Scripts" during install. Rename
-   it back to "js" (exactly that, lowercase) - index.html and object.html
-   both load their scripts from a "js" folder by name, and won't find them
-   under "Scripts".
-4. Open http://localhost/content/User/Downloads/<folder name>/check.html in
+   howto.html, check.html, style.css, app.js, and object.js, all in that
+   one folder (no subfolders).
+3. Open http://localhost/content/User/Downloads/<folder name>/check.html in
    a browser on the Digistar Host (substitute the real folder name from step
    1) to confirm Digistar's web interface is reachable and JavaScript files
-   are served correctly. If the JavaScript check fails, see "If the setup
-   check fails" in this project's README for a bundling workaround.
-5. For a fixed, predictable address instead of the downloads folder, move or
+   are served correctly.
+4. For a fixed, predictable address instead of the downloads folder, move or
    copy the whole folder to $Content\User\SkyTonight\ and use
    http://localhost/content/User/SkyTonight/index.html.
 
-Other than the "js" folder rename in step 3, no further configuration is
-needed - every file reference in the app is already relative to its own
-folder, except the two that intentionally stay root-relative to reach
-Digistar's own web interface.
+No further configuration is needed - every file reference in the app is
+already relative to its own folder, except the two that intentionally stay
+root-relative to reach Digistar's own web interface.
 ```
 
 ### Known risks to watch for
 
-- **The `js/` folder gets renamed to `Scripts` on install.** Confirmed by
-  direct testing: Digistar keeps every `.js` file together as a subfolder
-  (good - the subfolder itself does survive packaging), but renames that
-  subfolder to `Scripts` rather than keeping its original name of `js`. Since
-  `index.html` and `object.html` both reference `js/app.js`/`js/object.js`
-  by that literal path, the app won't load until the folder is renamed back
-  to `js` - step 3 of the install instructions above covers this. This is a
-  one-time manual fix on the installing site's end rather than a code change
-  here: renaming this project's own `js/` folder to `Scripts` would only
-  serve this one distribution channel, while breaking the conventional
-  layout every other install method (local dev, direct `$Content` install,
-  public hosting) already relies on.
+- **Digistar corrupts ES module `import` paths during packaging.** Confirmed
+  by direct testing: sharing the raw `js/` folder (ES modules, each
+  `import`ing others by relative path, e.g. `render.js`'s
+  `import { ... } from './format.js'`) resulted in that import resolving on
+  the *installed* copy to an absolute path from the *original sharing
+  computer's own* local Library installation
+  (`\User\Packages\<Site>\<ItemName>\Scripts\format.js`-style), not a
+  portable relative path and not the receiving site's own install location.
+  Every module import breaks as a result, on every site except (by
+  coincidence) the one that originally shared it. This is why the packaging
+  steps above bundle the app into two import-free scripts first, rather
+  than sharing `js/` directly - there's nothing left for Digistar's
+  packaging step to miscorrect once there are no `import` statements left
+  to rewrite.
+- **Relatedly, a shared `.js`-containing subfolder gets renamed to
+  `Scripts`.** Confirmed separately: Digistar keeps a folder of `.js` files
+  together on install (good), but renames it to `Scripts` regardless of its
+  original name. Bundling to `app.js`/`object.js` at the top level (no
+  subfolder at all) sidesteps this too, rather than needing a manual
+  rename-back step after every install.
 - **`.md` isn't supported.** Confirmed by trying it: `style.css` adds to a
   package fine (despite not being in Digistar's documented list of extra
   file types) but `README.md` can't be added at all. `.md` was never on that
