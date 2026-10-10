@@ -247,24 +247,41 @@ item, so Digistar's automatic path rewriting doesn't apply to it):
 1. After installing this package, find the downloaded files under
    $Content\User\Downloads\<this item's name>\.
 2. Confirm that folder directly contains index.html, object.html,
-   howto.html, check.html, style.css, and a js\ subfolder with every .js
-   file - all in that one folder, not nested another level deeper.
-3. Open http://localhost/content/User/Downloads/<folder name>/check.html in
+   howto.html, check.html, style.css, and a subfolder with every .js file -
+   all in that one folder, not nested another level deeper.
+3. Digistar renames that .js subfolder to "Scripts" during install. Rename
+   it back to "js" (exactly that, lowercase) - index.html and object.html
+   both load their scripts from a "js" folder by name, and won't find them
+   under "Scripts".
+4. Open http://localhost/content/User/Downloads/<folder name>/check.html in
    a browser on the Digistar Host (substitute the real folder name from step
    1) to confirm Digistar's web interface is reachable and JavaScript files
    are served correctly. If the JavaScript check fails, see "If the setup
    check fails" in this project's README for a bundling workaround.
-4. For a fixed, predictable address instead of the downloads folder, move or
+5. For a fixed, predictable address instead of the downloads folder, move or
    copy the whole folder to $Content\User\SkyTonight\ and use
    http://localhost/content/User/SkyTonight/index.html.
 
-No further configuration is needed - every file reference in the app is
-already relative to its own folder, except the two that intentionally stay
-root-relative to reach Digistar's own web interface.
+Other than the "js" folder rename in step 3, no further configuration is
+needed - every file reference in the app is already relative to its own
+folder, except the two that intentionally stay root-relative to reach
+Digistar's own web interface.
 ```
 
 ### Known risks to watch for
 
+- **The `js/` folder gets renamed to `Scripts` on install.** Confirmed by
+  direct testing: Digistar keeps every `.js` file together as a subfolder
+  (good - the subfolder itself does survive packaging), but renames that
+  subfolder to `Scripts` rather than keeping its original name of `js`. Since
+  `index.html` and `object.html` both reference `js/app.js`/`js/object.js`
+  by that literal path, the app won't load until the folder is renamed back
+  to `js` - step 3 of the install instructions above covers this. This is a
+  one-time manual fix on the installing site's end rather than a code change
+  here: renaming this project's own `js/` folder to `Scripts` would only
+  serve this one distribution channel, while breaking the conventional
+  layout every other install method (local dev, direct `$Content` install,
+  public hosting) already relies on.
 - **`.md` isn't supported.** Confirmed by trying it: `style.css` adds to a
   package fine (despite not being in Digistar's documented list of extra
   file types) but `README.md` can't be added at all. `.md` was never on that
