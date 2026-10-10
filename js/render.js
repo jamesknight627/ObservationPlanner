@@ -12,6 +12,7 @@ import {
     formatQuantity,
 } from './format.js';
 import { getTypeLabel } from './typeLabels.js';
+import { getTypeIconSvg } from './typeIcons.js';
 import { createDomeControl } from './digistar.js';
 
 export function renderObjectCard(object, { onSelect, onToggleFavorite } = {}) {
@@ -32,6 +33,7 @@ export function renderObjectCard(object, { onSelect, onToggleFavorite } = {}) {
         <p class="object-card__type">${getTypeLabel(object.type)}</p>
         <p class="object-card__mag">${formatMagnitude(object.magnitude)}</p>
         <p class="object-card__equipment">${equipment ?? '—'}</p>
+        <span class="object-card__type-icon">${getTypeIconSvg(object.type)}</span>
     `;
 
     card.addEventListener('click', (e) => {

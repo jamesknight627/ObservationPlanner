@@ -27,6 +27,13 @@ marker and label, with one click.
 - **Object search** — search by catalog ID (`M31`, `NGC224`) or common name
   (`Andromeda`, `Orion Nebula`). With the Solar System catalog selected,
   search by planet name (`Jupiter`).
+- **Type icons** — every object card (Results and Saved Objects) shows a small
+  glyph for its type in the lower-right corner - a spiral for a galaxy, a
+  scatter of dots for a cluster, a ring for a planetary nebula, and so on. One
+  glyph covers several related raw type codes (every open-cluster-like code
+  shares one icon, for instance) rather than drawing a unique icon for every
+  rare code in the dataset. See `js/typeIcons.js` for the full glyph set and
+  which codes map to which.
 - **Object details** — magnitude, angular size, RA/Dec, and computed rise time,
   transit ("time at apex"), max altitude, set time, and time above the horizon,
   for the currently selected date and location. Solar-system bodies also show
@@ -217,6 +224,7 @@ js/
   wikipedia.js             Wikipedia REST summary lookup (photo + description)
   format.js                Display formatting (times, coordinates, durations, units)
   typeLabels.js             Raw type codes ("Gxy", "PN", ...) -> readable labels
+  typeIcons.js               Raw type codes -> a small inline-SVG glyph for object cards
   constellations.js         IAU constellation abbreviations -> full names
   namedObjects.js           Static Messier common-name table + reverse search
   observingGuide.js         Heuristics behind the observing guide estimates

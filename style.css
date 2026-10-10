@@ -309,6 +309,28 @@ button:focus-visible {
     color: var(--accent);
 }
 
+/* A small glyph for the object's type (galaxy, cluster, nebula, ...), tucked into the
+   card's otherwise-empty lower-right corner - see js/typeIcons.js for the glyph set and
+   which raw type codes share one. Muted and low-opacity so it reads as a supporting
+   detail, not competing with the card's text; decorative (the text type label already
+   says the same thing), so it's inert to pointer/click handling. */
+.object-card__type-icon {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.6rem;
+    width: 40px;
+    height: 40px;
+    color: var(--text-muted);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.object-card__type-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
 .favorite-toggle {
     position: absolute;
     top: 0.5rem;
