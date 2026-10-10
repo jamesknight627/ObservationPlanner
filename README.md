@@ -247,9 +247,7 @@ item, so Digistar's automatic path rewriting doesn't apply to it):
    $Content\User\Downloads\<this item's name>\.
 2. Confirm that folder directly contains index.html, object.html,
    howto.html, check.html, style.css, and a js\ subfolder with every .js
-   file - all in that one folder, not nested another level deeper. If the
-   js\ subfolder didn't survive packaging intact, recreate it and move the
-   .js files back into it.
+   file - all in that one folder, not nested another level deeper.
 3. Open http://localhost/content/User/Downloads/<folder name>/check.html in
    a browser on the Digistar Host (substitute the real folder name from step
    1) to confirm Digistar's web interface is reachable and JavaScript files
@@ -266,14 +264,6 @@ root-relative to reach Digistar's own web interface.
 
 ### Known risks to watch for
 
-- **Subfolder structure.** It isn't confirmed whether Digistar's packaging
-  step preserves the `js/` subfolder or flattens every file into one
-  directory. If a downloading site reports broken imports (console errors
-  loading files under `js/`), the fix is either to manually recreate the
-  `js/` subfolder on their end (per the description above) or, if this keeps
-  happening, to restructure this project to put every `.js` file at the
-  repository root instead of under `js/` and update every `<script>` tag and
-  `import` statement accordingly.
 - **`.css` support.** Digistar's documented list of extra file types a
   package can include (`.html`, `.txt`, `.xml`, `.pdf`, `.js`, `.py`,
   `.dscp`, `.dsws`) doesn't mention `.css`, even though `style.css` is
