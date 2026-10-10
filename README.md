@@ -198,6 +198,89 @@ changed Digistar's web server port from 80 (in
   that device needs internet access as well as access to the Digistar
   network.
 
+## Sharing via the Digistar Cloud Library
+
+Digistar's Cloud Library is built around specific, typed Library items - media
+(images, models, slidesets, audio, video), scripts/shows, and Control Panel
+Pages (`.dscp`)/Workspaces (`.dsws`). Sky Tonight doesn't fit any of those
+categories: it's a plain multi-file web app, not a native Digistar object. So
+rather than trying to force it into one of those types, share it as a generic
+**Content Package** containing every project file, with manual install
+instructions (below) in the package description - Digistar's own path
+rewriting is built for its native content types and isn't something this
+project should rely on for an ES-module web app.
+
+### Packaging it
+
+1. In Digistar's Library, right-click and choose **Add Files to Library...**,
+   then add every file in this project (`index.html`, `object.html`,
+   `howto.html`, `check.html`, `style.css`, `README.md`, and every file under
+   `js/`). Digistar's automatic content-type detection won't know what to do
+   with most of these, and it can't follow the `import` chain inside
+   `js/app.js` to the modules it pulls in - expect to add each file
+   individually rather than relying on auto-detection.
+2. Right-click the resulting item and choose **Share Item via Content
+   Package** (safer than uploading straight to the live Cloud Library, since
+   you get a file you can test yourself first) or **Share Item to Cloud
+   Library** once you're confident it's right.
+3. Click **Advanced** and double-check the file list: every `.js` file under
+   `js/` needs to be present, not just `app.js`. Add any that are missing.
+4. Paste the description from the next section in as the package's
+   description field, then **Share**/**Save**.
+
+### Package description text
+
+```
+Sky Tonight — observation planner with Digistar dome integration
+
+A static web-based tool for planning deep-sky and solar-system observing
+sessions: search ~227k objects (Messier + full NGC/IC/etc. catalog) or the
+Solar System, filter by visibility/altitude/time windows, save favorites, and
+lay out a night's schedule on a draggable timeline with sunset/twilight
+markers. On a Digistar 7 system it can also push objects directly to the
+dome.
+
+INSTALLATION (manual - this is a plain web app, not a native Digistar Library
+item, so Digistar's automatic path rewriting doesn't apply to it):
+
+1. After installing this package, find the downloaded files under
+   $Content\User\Downloads\<this item's name>\.
+2. Confirm that folder directly contains index.html, object.html,
+   howto.html, check.html, style.css, and a js\ subfolder with every .js
+   file - all in that one folder, not nested another level deeper. If the
+   js\ subfolder didn't survive packaging intact, recreate it and move the
+   .js files back into it.
+3. Open http://localhost/content/User/Downloads/<folder name>/check.html in
+   a browser on the Digistar Host (substitute the real folder name from step
+   1) to confirm Digistar's web interface is reachable and JavaScript files
+   are served correctly. If the JavaScript check fails, see "If the setup
+   check fails" in this project's README for a bundling workaround.
+4. For a fixed, predictable address instead of the downloads folder, move or
+   copy the whole folder to $Content\User\SkyTonight\ and use
+   http://localhost/content/User/SkyTonight/index.html.
+
+No further configuration is needed - every file reference in the app is
+already relative to its own folder, except the two that intentionally stay
+root-relative to reach Digistar's own web interface.
+```
+
+### Known risks to watch for
+
+- **Subfolder structure.** It isn't confirmed whether Digistar's packaging
+  step preserves the `js/` subfolder or flattens every file into one
+  directory. If a downloading site reports broken imports (console errors
+  loading files under `js/`), the fix is either to manually recreate the
+  `js/` subfolder on their end (per the description above) or, if this keeps
+  happening, to restructure this project to put every `.js` file at the
+  repository root instead of under `js/` and update every `<script>` tag and
+  `import` statement accordingly.
+- **`.css` support.** Digistar's documented list of extra file types a
+  package can include (`.html`, `.txt`, `.xml`, `.pdf`, `.js`, `.py`,
+  `.dscp`, `.dsws`) doesn't mention `.css`, even though `style.css` is
+  required. Confirm it can be added manually via the Advanced dialog's "add
+  file" control before relying on it; if not, the whole stylesheet would need
+  inlining into a `<style>` block in each HTML file instead.
+
 ## Project structure
 
 ```
