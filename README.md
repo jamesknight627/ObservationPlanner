@@ -17,7 +17,7 @@ marker and label, with one click.
   favorite them, check the Plan tab, fine-tune the schedule, optionally
   preview on a dome), linked from the header. Deliberately brief; this
   README is where the detail lives.
-- **Observation planner** — browse the Messier catalog, the full ~227k-object
+- **Observation planner** — browse the Messier catalog, the full ~220k-object
   deep-sky database, or the Solar System (the Sun, planets, and Pluto), filtered by date/location, type, magnitude, peak
   altitude, a time-at-apex window, and an "up between" window, paginated 20
   at a time. "Up between" has an "Altitude above" filter paired with it
@@ -47,7 +47,11 @@ marker and label, with one click.
   equipment, and darkest-sky (Bortle scale) tolerance for that object, plus a
   Wikipedia summary and photo when one is available.
 - **Saved objects** — a favorites tab backed by `localStorage`, so a returning
-  visitor doesn't have to re-search objects they cared about.
+  visitor doesn't have to re-search objects they cared about. A **Sort by**
+  dropdown orders them by rise time (the default), apex/transit time, set
+  time, or transit duration for the selected date; an object with no rise/set
+  that day (e.g. circumpolar) sorts to the end rather than before everything
+  else.
 - **Plan** — a third tab that lays your saved objects out as a schedule for
   the selected date: each favorite that's up that night gets its own row on
   a shared timeline, as a bar spanning its natural rise-to-set window. Drag
@@ -253,7 +257,7 @@ import-free scripts first.
 Sky Tonight — observation planner with Digistar dome integration
 
 A static web-based tool for planning deep-sky and solar-system observing
-sessions: search ~227k objects (Messier + full NGC/IC/etc. catalog) or the
+sessions: search ~220k objects (Messier + full NGC/IC/etc. catalog) or the
 Solar System, filter by visibility/altitude/time windows, save favorites, and
 lay out a night's schedule on a draggable timeline with sunset/twilight
 markers. On a Digistar 7 system it can also push objects directly to the
