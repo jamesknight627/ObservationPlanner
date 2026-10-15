@@ -28,11 +28,11 @@ export function renderObjectCard(object, { onSelect, onToggleFavorite } = {}) {
     const { equipment } = object.getObservingGuide();
 
     card.innerHTML = `
-        <button class="favorite-toggle" aria-label="Toggle favorite" aria-pressed="${favorited}">★</button>
+        <button class="favorite-toggle" aria-label="Toggle favorite" aria-pressed="${favorited}">*</button>
         <h3 class="object-card__name">${object.cardTitle}</h3>
         <p class="object-card__type">${getTypeLabel(object.type)}</p>
         <p class="object-card__mag">${formatMagnitude(object.magnitude)}</p>
-        <p class="object-card__equipment">${equipment ?? '—'}</p>
+        <p class="object-card__equipment">${equipment ?? '-'}</p>
         <span class="object-card__type-icon">${getTypeIconSvg(object.type)}</span>
     `;
 
@@ -87,8 +87,8 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
 
     panel.innerHTML = `
         <div class="detail-panel__toolbar">
-            <button class="detail-panel__minimize" aria-label="Minimize detail panel">›</button>
-            <button class="detail-panel__close" aria-label="Close detail panel">×</button>
+            <button class="detail-panel__minimize" aria-label="Minimize detail panel">&gt;</button>
+            <button class="detail-panel__close" aria-label="Close detail panel">X</button>
         </div>
         <h2>${object.heading}</h2>
         <dl class="detail-panel__attrs">
@@ -125,7 +125,7 @@ export function renderDetailPanel(panel, object, { visibility, location, date, o
     minimizeBtn?.addEventListener('click', () => {
         const minimized = panel.classList.toggle('is-minimized');
         document.querySelector('.app-body')?.classList.toggle('detail-panel-minimized', minimized);
-        minimizeBtn.textContent = minimized ? '‹' : '›';
+        minimizeBtn.textContent = minimized ? '<' : '>';
         minimizeBtn.setAttribute('aria-label', minimized ? 'Expand detail panel' : 'Minimize detail panel');
     });
 

@@ -709,9 +709,9 @@ async function runFavoritesDomeAction(action, busyText, getSuccessText) {
 }
 
 favoritesDomeAddBtn?.addEventListener('click', () =>
-    runFavoritesDomeAction(addAllFavoritesToDome, 'Adding…', (message) => message));
+    runFavoritesDomeAction(addAllFavoritesToDome, 'Adding...', (message) => message));
 favoritesDomeResetBtn?.addEventListener('click', () =>
-    runFavoritesDomeAction(() => resetAllDome(state.location?.label), 'Resetting…', () => 'Dome view reset'));
+    runFavoritesDomeAction(() => resetAllDome(state.location?.label), 'Resetting...', () => 'Dome view reset'));
 
 clearFiltersBtn?.addEventListener('click', () => {
     state.filters = {
@@ -753,7 +753,7 @@ locationInputEl?.addEventListener('change', async () => {
     const query = locationInputEl.value.trim();
     if (!query) return;
 
-    if (locationStatusEl) locationStatusEl.textContent = 'Locating…';
+    if (locationStatusEl) locationStatusEl.textContent = 'Locating...';
     try {
         const location = await geocodeLocation(query);
         if (!location) {

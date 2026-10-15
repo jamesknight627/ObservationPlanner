@@ -486,9 +486,9 @@ export function createDomeControl(target) {
     }
 
     button.addEventListener("click", () =>
-        run(() => sendToDome(target), "Sending…", `${target.name} is on the dome`));
+        run(() => sendToDome(target), "Sending...", `${target.name} is on the dome`));
     resetButton.addEventListener("click", () =>
-        run(() => resetDome(target), "Resetting…", "Dome view reset"));
+        run(() => resetDome(target), "Resetting...", "Dome view reset"));
 
     wrapper.append(button, resetButton, status);
     isDomeAvailable().then((available) => { wrapper.hidden = !available; });

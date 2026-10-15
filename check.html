@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Check — Sky Tonight</title>
+    <title>Setup Check - Sky Tonight</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .check-page { max-width: 640px; margin: 0 auto; padding: 1.5rem; }
@@ -71,7 +71,7 @@
         var list = document.getElementById('checks');
         checks.forEach(function (check) {
             var item = document.createElement('li');
-            item.innerHTML = '<strong></strong><span class="check-result">Checking…</span>';
+            item.innerHTML = '<strong></strong><span class="check-result">Checking...</span>';
             item.querySelector('strong').textContent = check.name;
             list.appendChild(item);
             var result = item.querySelector('.check-result');

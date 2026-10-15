@@ -337,7 +337,7 @@ const SUN_MARK_DEFS = [
 // language (a distinctly colored/patterned line meaning a specific altitude or moment).
 const LEGEND_ITEMS = [
     ...SUN_MARK_DEFS.map(({ kind, label }) => ({ kind, label })),
-    { kind: 'horizon', label: 'Horizon (0° altitude)' },
+    { kind: 'horizon', label: 'Horizon (0 deg altitude)' },
 ];
 
 function hasAnySunMark(sunMarks) {
@@ -492,7 +492,7 @@ function renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMark
     resetBtn.className = 'scheduler__reset';
     resetBtn.title = 'Reset to rise/set times';
     resetBtn.setAttribute('aria-label', `Reset ${entry.object.cardTitle} to its rise/set times`);
-    resetBtn.textContent = '↺';
+    resetBtn.textContent = 'R';
     resetBtn.addEventListener('click', () => handlers.onResetTimes?.(entry));
 
     function applyTimes(start, end) {
@@ -501,7 +501,7 @@ function renderRow(entry, entries, timelineStart, timelineEnd, handlers, sunMark
         positionBar(bar, start, end, timelineStart, timelineEnd);
         const midpointMs = (start.getTime() + end.getTime()) / 2;
         barLabel.style.left = `${pct(midpointMs, timelineStart.getTime(), timelineEnd.getTime())}%`;
-        barLabel.textContent = `${formatClockTime(start, longitude)}–${formatClockTime(end, longitude)}`;
+        barLabel.textContent = `${formatClockTime(start, longitude)}-${formatClockTime(end, longitude)}`;
         resetBtn.hidden = !isOverridden(entry);
     }
     applyTimes(entry.start, entry.end);

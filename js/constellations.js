@@ -11,7 +11,7 @@ const CONSTELLATION_NAMES = {
     Ara: 'Ara',
     Ari: 'Aries',
     Aur: 'Auriga',
-    Boo: 'Boötes',
+    Boo: 'Bootes',
     Cae: 'Caelum',
     Cam: 'Camelopardalis',
     Cnc: 'Cancer',

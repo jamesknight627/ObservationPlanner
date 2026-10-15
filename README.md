@@ -656,33 +656,44 @@ commands (the flag still thinks they exist) until a reset forces it. See
   Digistar's browser that property is simply unrecognized and ignored -
   leaving those elements with no actual top/right/bottom/left, so they
   collapsed instead of filling their container. Fixed by spelling out
-  `top`/`right`/`bottom`/`left` individually instead. There's also a
-  second confirmed real-hardware bug, this one about *text* rather than
-  code: the Prev/Next buttons and the "Back to planner" links (all typed
-  directly into static HTML, e.g. `← Prev` in `index.html`) rendered as
-  garbled text, while the identical `→` character used the identical way
-  in "More details" and "View on Wikipedia" - built as JS template-literal
-  strings and inserted via `innerHTML` at runtime, rather than sitting in
-  the HTML file itself - rendered correctly. The UTF-8 charset meta tag is
-  already the first thing in every page's `<head>`, and the same codepoint
-  survives fine once it's JS rather than raw HTML, so this doesn't look
-  like a missing font glyph after all - more likely something in however
-  the `.html` files specifically reach Digistar (its web server, or a
-  deployment/copy step) re-encodes them along the way. Fixed by switching
-  the static-HTML arrows to plain ASCII (`<`/`>`) rather than chasing the
-  transcoding itself, and the two JS-built ones were changed to match for
-  consistency even though they weren't broken. If another non-ASCII
-  character typed directly into an `.html` file (★, ↺, ‹, ›, em/en dashes,
-  prime marks, °, …) turns up broken on the dome, this is the first thing
-  to suspect - the same fix applies (ASCII in, ASCII out), and whether
-  that same character is fine when it instead comes from a JS string is a
-  useful data point for narrowing down where the real re-encoding happens.
-  Keep this in mind (JS and CSS compatibility, *and* which characters you
-  type directly into `.html` files) when making changes - test newer-
-  looking CSS properties against [caniuse.com](https://caniuse.com) for
-  Chrome 84 support, and prefer plain ASCII in the `.html` files for
-  anything Digistar will render, since this sandbox can't run Digistar's
-  actual browser or web server to catch either kind of problem directly.
+  `top`/`right`/`bottom`/`left` individually instead.
+- **Every non-ASCII character in the app's UI has been replaced with an
+  ASCII equivalent** (★→`*`, ×→`X`, ›/‹→`>`/`<`, ↺→`R`, em/en dashes→`-`,
+  prime/double-prime (arcmin/arcsec)→`'`/`"`, °→`" deg"`, …→`"..."`, and a
+  couple of accented letters in display text, e.g. "Boötes"→"Bootes") -
+  this was a real, twice-confirmed-on-hardware bug, not a precaution. First
+  confirmed on a Chromium-84-era Digistar 7: the Prev/Next buttons and
+  "Back to planner" links (typed directly into static HTML, e.g.
+  `← Prev` in `index.html`) rendered as garbled text, while the identical
+  `→` character delivered via a JS template-literal string and inserted via
+  `innerHTML` (in "More details"/"View on Wikipedia") rendered correctly -
+  at the time this looked like something specific to *static HTML files*
+  being re-encoded somewhere in how they reach Digistar (its web server, or
+  a deployment/copy step), since the identical codepoint survived fine once
+  it was JS rather than raw HTML. Fixed then by switching the static-HTML
+  arrows to plain ASCII, with the two JS-built ones changed to match for
+  consistency even though they weren't broken at the time.
+  Later, on a **newer** Digistar release, that "JS strings are safe" rule
+  stopped holding: the favorite-star toggle (★) and the detail panel's
+  minimize/expand chevrons (›/‹) - both delivered via JS `innerHTML`/
+  `textContent`, exactly like the "safe" links above - were confirmed
+  garbled in the same "nonsense text" way as the original arrow bug. So the
+  real pattern isn't "static HTML vs. JS-delivered" after all; it's
+  something about the rendering environment itself (most likely a Chromium
+  version difference between Digistar releases, though this hasn't been
+  pinned down further) that doesn't reliably render non-ASCII text, with
+  the "JS strings survive" result on the older hardware apparently
+  coincidental rather than a real distinction. Given that, every
+  remaining non-ASCII UI character was converted proactively rather than
+  waiting for each one to be individually confirmed broken on whatever
+  Digistar release comes next. Keep this in mind (JS and CSS compatibility,
+  *and* avoiding non-ASCII characters anywhere text will reach Digistar,
+  regardless of whether it's static HTML or a JS string) when adding new
+  UI text - test newer-looking CSS properties against
+  [caniuse.com](https://caniuse.com) for Chrome 84 support, and use plain
+  ASCII for anything Digistar will render, since this sandbox can't run
+  Digistar's actual browser or web server to catch either kind of problem
+  directly.
 - The Digistar User's Guide uses `/digistar/execute` in its HTTP command
   reference but `/software/execute` in its sample page. Sky Tonight uses the
   former; if commands fail with HTTP 404, change `EXECUTE_PATH` in

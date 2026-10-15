@@ -115,9 +115,9 @@ function render(object, { visibility, location, summary }) {
                 <p class="observing-guide__disclaimer">Estimated from magnitude and size - a starting point, not a guarantee.</p>
                 ${warningBlock}
                 <dl class="detail-panel__attrs">
-                    <dt>Constellation</dt><dd>${constellationName ?? '—'}</dd>
+                    <dt>Constellation</dt><dd>${constellationName ?? '-'}</dd>
                     <dt>Min. magnification</dt><dd>${formatMagnification(minMagnification)}</dd>
-                    <dt>Min. equipment</dt><dd>${equipment ?? '—'}</dd>
+                    <dt>Min. equipment</dt><dd>${equipment ?? '-'}</dd>
                     <dt>Max Bortle rating</dt><dd>${formatBortle(maxBortle)}</dd>
                 </dl>
             </aside>

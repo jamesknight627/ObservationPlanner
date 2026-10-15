@@ -1,5 +1,5 @@
 export function formatDuration(ms) {
-    if (ms == null) return '—';
+    if (ms == null) return '-';
     const totalMinutes = Math.round(ms / 60000);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
@@ -35,14 +35,14 @@ export function formatTime(date, longitude) {
 export function formatClockTime(date, longitude) {
     return date
         ? date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', timeZone: timeZoneForLongitude(longitude) })
-        : '—';
+        : '-';
 }
 
 // Formats RA as sexagesimal hr:min:sec.s (e.g. "05:35:17.2"). Rounds to the nearest
 // tenth of a second first, rather than rounding h/m/s independently, so a value like
 // 59.96s correctly carries over into the next minute instead of displaying as "60.0".
 export function formatRaHours(raDeg) {
-    if (raDeg == null) return '—';
+    if (raDeg == null) return '-';
     const totalSeconds = Math.round((raDeg / 15) * 3600 * 10) / 10;
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -52,45 +52,45 @@ export function formatRaHours(raDeg) {
 }
 
 export function formatDecDegrees(decDeg) {
-    if (decDeg == null) return '—';
-    return `${decDeg.toFixed(2)}°`;
+    if (decDeg == null) return '-';
+    return `${decDeg.toFixed(2)} deg`;
 }
 
 export function formatMagnitude(mag) {
-    if (mag == null) return '—';
+    if (mag == null) return '-';
     return `${mag} mag`;
 }
 
 // Angular size is stored in arcminutes (the deep-sky dataset's r1 field is too). Planets
 // are much smaller than 1′, so those are shown in arcseconds instead.
 export function formatAngularSize(arcmin) {
-    if (arcmin == null) return '—';
-    if (arcmin < 1) return `${(arcmin * 60).toFixed(1)}″`;
-    return `${Number(arcmin.toFixed(2))}′`;
+    if (arcmin == null) return '-';
+    if (arcmin < 1) return `${(arcmin * 60).toFixed(1)}"`;
+    return `${Number(arcmin.toFixed(2))}'`;
 }
 
 // A dataset value with its unit, e.g. "142,984 km" or "24.79 m/s²".
 export function formatQuantity(value, unit) {
-    if (value == null) return '—';
+    if (value == null) return '-';
     const number = value.toLocaleString(undefined, { maximumFractionDigits: 2 });
     return unit ? `${number} ${unit}` : number;
 }
 
 export function formatAltitude(altDeg) {
-    if (altDeg == null) return '—';
-    return `${altDeg.toFixed(1)}°`;
+    if (altDeg == null) return '-';
+    return `${altDeg.toFixed(1)} deg`;
 }
 
 export function formatCoords(location) {
-    return `${location.latitude.toFixed(2)}°, ${location.longitude.toFixed(2)}°`;
+    return `${location.latitude.toFixed(2)} deg, ${location.longitude.toFixed(2)} deg`;
 }
 
 export function formatMagnification(power) {
-    if (power == null) return '—';
+    if (power == null) return '-';
     return `~${power}x`;
 }
 
 export function formatBortle(bortle) {
-    if (bortle == null) return '—';
+    if (bortle == null) return '-';
     return `Class ${bortle} or better`;
 }

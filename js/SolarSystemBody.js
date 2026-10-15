@@ -81,7 +81,7 @@ export class SolarSystemBody extends CelestialObject {
         return [
             { label: 'Distance from Earth', value: Math.round(this.distanceAu * AU_KM / 1e5) / 10, unit: 'million km' },
             { label: 'Diameter', value: this.diameterKm, unit: 'km' },
-            { label: 'Surface gravity', value: numberOrNull(r[SOLAR_FIELDS.gravity]), unit: 'm/s²' },
+            { label: 'Surface gravity', value: numberOrNull(r[SOLAR_FIELDS.gravity]), unit: 'm/s^2' },
             { label: 'Average distance from Sun', value: numberOrNull(r[SOLAR_FIELDS.averageDistanceMillionKm]), unit: 'million km' },
             { label: 'Orbital period', value: numberOrNull(r[SOLAR_FIELDS.orbitalPeriodYears]), unit: 'years' },
             { label: 'Known moons', value: numberOrNull(r[SOLAR_FIELDS.moons]), unit: '' },

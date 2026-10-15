@@ -6,8 +6,8 @@
 const EQUIPMENT_TIERS = [
     { maxMag: 6, label: 'Naked eye' },
     { maxMag: 9, label: 'Binoculars (7x50 or similar)' },
-    { maxMag: 11.5, label: 'Small telescope (3–6" aperture)' },
-    { maxMag: 13.5, label: 'Medium telescope (8–10" aperture)' },
+    { maxMag: 11.5, label: 'Small telescope (3-6" aperture)' },
+    { maxMag: 13.5, label: 'Medium telescope (8-10" aperture)' },
     { maxMag: Infinity, label: 'Large telescope (12"+ aperture)' },
 ];
 
