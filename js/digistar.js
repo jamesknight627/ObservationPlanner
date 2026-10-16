@@ -19,6 +19,17 @@ const DOME_SETTINGS = {
     syncSky: true,
 };
 
+// Some Digistar releases require every HTTP web-interface request to carry an API
+// key, confirmed by this exact error: "An authorization header or api key is
+// required for http request: ... /digistar/objects/eye/intensity". Generate a key
+// from the Digistar Host (see the User's Guide's web interface / security section)
+// and paste it here - leave empty for installs that don't require one, which keeps
+// working exactly as before. Sent as a standard "Authorization" header, since that's
+// the mechanism the error message names; if Digistar instead expects a different
+// header name (e.g. "X-API-Key") or a scheme prefix (e.g. "Bearer <key>") rather
+// than the raw key value, adjust buildAuthHeaders() below to match.
+const API_KEY = "";
+
 // Digistar's command endpoint. The guide's reference table uses /digistar/execute;
 // its sample page uses /software/execute. If commands fail with HTTP 404, try that.
 const EXECUTE_PATH = "/digistar/execute";
@@ -27,6 +38,12 @@ const EXECUTE_PATH = "/digistar/execute";
 const PROBE_PATH = "/digistar/objects/eye/intensity";
 
 const TIMEOUT_MS = 4000;
+
+// See the API_KEY comment above for what to change here if this guessed format
+// (a plain "Authorization" header holding the raw key) turns out to be wrong.
+function buildAuthHeaders() {
+    return API_KEY ? { Authorization: API_KEY } : {};
+}
 
 // ---------------------------------------------------------------------------
 // Which objects Digistar has as built-in named system objects: Messier/NGC
@@ -297,7 +314,7 @@ async function fetchWithTimeout(url) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
-        return await fetch(url, { signal: controller.signal, cache: "no-store" });
+        return await fetch(url, { signal: controller.signal, cache: "no-store", headers: buildAuthHeaders() });
     } catch (err) {
         if (err.name === "AbortError") throw new Error("Digistar didn't answer in time");
         throw new Error("Couldn't reach Digistar's web interface");

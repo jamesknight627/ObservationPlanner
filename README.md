@@ -186,7 +186,9 @@ changed Digistar's web server port from 80 (in
 ### If the setup check fails
 
 - **Digistar web interface fails:** confirm `system webInterface on`, and check
-  the web server port as described above.
+  the web server port as described above. On newer Digistar releases, this can
+  also fail with "An authorization header or api key is required for http
+  request" - see **API key (newer Digistar releases)** below.
 - **JavaScript files check fails:** Digistar's server isn't labeling `.js`
   files in a way browsers accept for module scripts. Bundle the modules into
   ordinary scripts:
@@ -201,6 +203,37 @@ changed Digistar's web server port from 80 (in
   from the computer or device running the page, not from Digistar itself, so
   that device needs internet access as well as access to the Digistar
   network.
+
+### API key (newer Digistar releases)
+
+Confirmed on a newer Digistar release: every request to its web interface
+(including the connectivity probe `isDomeAvailable()` uses, and every dome
+command) can be rejected with "An authorization header or api key is
+required for http request: ... /digistar/objects/eye/intensity" - without
+it, every dome-related request silently fails, including the probe that
+decides whether to show the dome buttons at all, so they just never appear
+with no visible error.
+
+1. Generate an API key from the Digistar Host (see the User's Guide's web
+   interface/security section for the exact steps on your release).
+2. Open `js/digistar.js` and paste it into the `API_KEY` constant near the
+   top of the file (in the `Settings` section, next to `DOME_SETTINGS`):
+   ```js
+   const API_KEY = "paste-your-generated-key-here";
+   ```
+3. Reload the page. Every request now carries it as a standard
+   `Authorization` header (`buildAuthHeaders()`, right below `API_KEY`) -
+   that's the mechanism the error message names, but it's an educated guess
+   at the exact format (a plain header holding the raw key value, no
+   scheme prefix). If requests still fail with an authorization error after
+   setting the key, Digistar may expect a different header name (e.g.
+   `X-API-Key`) or a prefixed value (e.g. `Bearer <key>`) instead - adjust
+   `buildAuthHeaders()` to match whatever the generation step's own
+   documentation specifies.
+
+Installs that don't require a key are unaffected: leave `API_KEY` as the
+empty string (the default) and no `Authorization` header is sent at all,
+exactly as before this existed.
 
 ## Sharing via the Digistar Cloud Library
 
